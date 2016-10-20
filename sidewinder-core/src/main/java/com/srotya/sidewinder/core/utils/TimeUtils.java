@@ -24,6 +24,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class TimeUtils {
 
+	private static final int MAX_BITS_TO_SHIFT = 63; // 32 bits to shift to
+														// convert nanoseconds
+														// and 31; to be
+														// subtracted (log base
+														// 2 (window))
 	private static final IllegalArgumentException ARGUMENT_EXCEPTION = new IllegalArgumentException();
 
 	private TimeUtils() {
@@ -33,14 +38,27 @@ public class TimeUtils {
 	 * Floor long time to supplied Window
 	 * 
 	 * @param timeInMilliSeconds
-	 * @param windowSizeInSeconds
+	 * @param bucketSizeInSeconds
 	 * @return windowedTime
 	 */
-	public static int getWindowFlooredTime(long time, int windowSizeInSeconds, TimeUnit unit)
+	public static int getTimeBucket(TimeUnit unit, long timestamp, int bucketSizeInSeconds)
 			throws IllegalArgumentException {
-		int ts;
-		ts = timeToSeconds(time, unit);
-		return getWindowFlooredTime(ts, windowSizeInSeconds);
+		int ts = timeToSeconds(unit, timestamp);
+		return getWindowFlooredNaturalTime(ts, bucketSizeInSeconds);
+	}
+
+	/**
+	 * @param unit
+	 * @param timestamp
+	 * @param windowSizeInBinarySeconds
+	 *            (must be a power of 2)
+	 * @return
+	 */
+	public static int getWindowFlooredBinaryTime(TimeUnit unit, long timestamp, int windowSizeInSeconds) {
+		timestamp = timeToNanoSeconds(unit, timestamp);
+		System.err.println("shift:" + (MAX_BITS_TO_SHIFT - Integer.numberOfLeadingZeros(windowSizeInSeconds)));
+		int ts = (int) (timestamp >> (MAX_BITS_TO_SHIFT - Integer.numberOfLeadingZeros(windowSizeInSeconds)));
+		return ts;
 	}
 
 	/**
@@ -50,7 +68,7 @@ public class TimeUtils {
 	 * @param unit
 	 * @return
 	 */
-	public static int timeToSeconds(long time, TimeUnit unit) {
+	public static int timeToSeconds(TimeUnit unit, long time) {
 		int ts;
 		switch (unit) {
 		case NANOSECONDS:
@@ -72,37 +90,58 @@ public class TimeUtils {
 	}
 
 	/**
+	 * @param unit
+	 * @param timeInSeconds
+	 * @return
+	 */
+	public static long timeToNanoSeconds(TimeUnit unit, long time) {
+		long ts;
+		switch (unit) {
+		case NANOSECONDS:
+			ts = time;
+			break;
+		case MICROSECONDS:
+			ts = ((long) time * (1000));
+			break;
+		case MILLISECONDS:
+			ts = (((long) time) * 1000 * 1000);
+			break;
+		case SECONDS:
+			ts = (((long) time) * (1000 * 1000 * 1000));
+			break;
+		default:
+			throw ARGUMENT_EXCEPTION;
+		}
+		return ts;
+	}
+
+	/**
 	 * Floor integer time to supplied Window
 	 * 
 	 * @param timeInSeconds
-	 * @param windowSizeInSeconds
+	 * @param bucketInSeconds
 	 * @return windowedTime
 	 */
-	public static int getWindowFlooredTime(int timeInSeconds, int windowSizeInSeconds) {
-		return timeInSeconds = ((timeInSeconds / windowSizeInSeconds) * windowSizeInSeconds);
+	public static int getWindowFlooredNaturalTime(int timeInSeconds, int bucketInSeconds) {
+		/**
+		 * bit shifting division and multiplication doesn't outperform the JIT compiler
+		 */
+//		return (timeInSeconds >> bucketInSeconds) << bucketInSeconds; 
+		return ((timeInSeconds / bucketInSeconds) * bucketInSeconds);
 	}
 
 	/**
-	 * Get integer time offset from the supplied Window
-	 * 
 	 * @param time
-	 * @param windowSizeInSeconds
-	 * @return offset
+	 * @param unit
+	 * @param timestamp
+	 * @param bucketInSeconds
+	 * @return
 	 */
-	public static short getWindowOffsetTime(long time, int windowSizeInSeconds, TimeUnit unit) {
-		int ts = timeToSeconds(time, unit);
-		return getWindowOffsetTime(ts, windowSizeInSeconds);
-	}
-
-	/**
-	 * Get integer time offset from the supplied Window
-	 * 
-	 * @param time
-	 * @param windowSizeInSeconds
-	 * @return offset
-	 */
-	public static short getWindowOffsetTime(int time, int windowSizeInSeconds) {
-		return (short) (time % windowSizeInSeconds);
+	public static TimeSplit getTimeSplit(TimeSplit time, TimeUnit unit, long timestamp, int bucketInSeconds) {
+		int ts = timeToSeconds(unit, timestamp);
+		time.setBucket(getWindowFlooredNaturalTime(ts, bucketInSeconds));
+		time.setOffset(timestamp);
+		return time;
 	}
 
 }

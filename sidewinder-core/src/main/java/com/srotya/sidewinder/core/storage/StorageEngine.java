@@ -15,12 +15,53 @@
  */
 package com.srotya.sidewinder.core.storage;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author ambudsharma
- *
  */
 public interface StorageEngine {
 	
+	/**
+	 * @param conf
+	 * @throws IOException
+	 */
+	public void configure(Map<String, String> conf) throws IOException;
 	
+	/**
+	 * Connect to the storage engine
+	 * @throws IOException
+	 */
+	public void connect() throws IOException;
+	
+	/**
+	 * Disconnect from the storage engine
+	 * @throws IOException
+	 */
+	public void disconnect()  throws IOException;
+	
+	/**
+	 * @param seriesName
+	 * @param tags
+	 * @param unit
+	 * @param timestamp
+	 * @param value
+	 * @throws IOException
+	 */
+	void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value) throws IOException;
+	
+	/**
+	 * @param seriesName
+	 * @param tags
+	 * @param unit
+	 * @param timestamp
+	 * @param timeBucket
+	 * @param value
+	 * @throws IOException
+	 */
+	void writeSeries(String seriesName, List<String> tags,  TimeUnit unit, long timestamp, double value) throws IOException;
 
 }
