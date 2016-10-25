@@ -20,9 +20,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 
 import org.rocksdb.CompactionStyle;
 import org.rocksdb.CompressionType;
@@ -35,6 +35,9 @@ import org.rocksdb.util.SizeUnit;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.srotya.sidewinder.core.utils.ByteUtils;
 
 import io.symcpe.wraith.MurmurHash;
@@ -45,6 +48,7 @@ import io.symcpe.wraith.MurmurHash;
 public class RocksDBStorageEngine extends AbstractStorageEngine {
 
 	private static final Charset CHARSET = Charset.forName("utf-8");
+	private LoadingCache<String, TreeMap<Long, byte[]>> seriesLookup;
 	private RocksDB indexdb;
 	private Options indexdbOptions;
 	private RocksDB tsdb;
@@ -71,10 +75,10 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	public void configure(Map<String, String> conf) throws IOException {
 		tsdbWalDirectory = conf.getOrDefault("tsdb.wal.directory", "target/tsdbw");
 		tsdbMemDirectory = conf.getOrDefault("tsdb.mem.directory", "target/tsdbm");
-		
+
 		indexdbWalDirectory = conf.getOrDefault("idxdb.wal.directory", "target/idxdbw");
 		indexdbMemDirectory = conf.getOrDefault("idxdb.mem.directory", "target/idxdbm");
-		
+
 		if (true) {
 			wipeDirectory(tsdbWalDirectory);
 			wipeDirectory(tsdbMemDirectory);
@@ -109,12 +113,21 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 			file.mkdirs();
 		}
 	}
-	
+
 	@Override
 	public void connect() throws IOException {
 		try {
 			tsdb = RocksDB.open(tsdbOptions, tsdbMemDirectory);
 			indexdb = RocksDB.open(indexdbOptions, indexdbMemDirectory);
+			seriesLookup = CacheBuilder.newBuilder().maximumSize(1000)
+					.build(new CacheLoader<String, TreeMap<Long, byte[]>>() {
+
+						@Override
+						public TreeMap<Long, byte[]> load(String key) throws Exception {
+							return getTreeFromDS(key);
+						}
+
+					});
 		} catch (RocksDBException e) {
 			throw new IOException(e);
 		}
@@ -154,26 +167,34 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 		}
 	}
 
+	public TreeMap<Long, byte[]> getTreeFromDS(String rowKey) throws RocksDBException {
+		return getTreeFromDS(rowKey.getBytes());
+	}
+
 	@SuppressWarnings("unchecked")
+	public TreeMap<Long, byte[]> getTreeFromDS(byte[] rowKey) throws RocksDBException {
+		byte[] ds = tsdb.get(rowKey);
+		TreeMap<Long, byte[]> map;
+		if (ds != null) {
+			map = kryoThreadLocal.get().readObject(new Input(ds), TreeMap.class);
+		} else {
+			map = new TreeMap<>();
+		}
+		return map;
+	}
+
 	@Override
 	public void writeSeriesPoint(byte[] rowKey, long timestamp, byte[] value) throws IOException {
-		String encodedKey = Base64.getEncoder().encodeToString(rowKey);
+		String encodedKey = new String(rowKey);
 		synchronized (encodedKey.intern()) {
 			try {
-				byte[] ds = tsdb.get(rowKey);
-				TreeMap<Long, byte[]> map;
-				if (ds != null) {
-					map = kryoThreadLocal.get().readObject(new Input(ds), TreeMap.class);
-				} else {
-					map = new TreeMap<>();
-					ds = new byte[0];
-				}
-				ByteArrayOutputStream stream = new ByteArrayOutputStream(ds.length + 20);
+				TreeMap<Long, byte[]> map = seriesLookup.get(encodedKey);
+				ByteArrayOutputStream stream = new ByteArrayOutputStream((map.size() + 1) * 20);
 				Output output = new Output(stream);
 				kryoThreadLocal.get().writeObject(output, map);
 				output.close();
 				tsdb.put(rowKey, stream.toByteArray());
-			} catch (RocksDBException e) {
+			} catch (RocksDBException | ExecutionException e) {
 				throw new IOException(e);
 			}
 		}

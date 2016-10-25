@@ -18,6 +18,7 @@ package com.srotya.sidewinder.core.storage;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -36,19 +37,22 @@ public class TestRocksDBStorageEngine {
 		engine.configure(new HashMap<>());
 		engine.connect();
 		long timestamp = System.currentTimeMillis();
-		ExecutorService es = Executors.newFixedThreadPool(1);
-		for (int i = 0; i < 1000000; i++) {
-			final int k = i;
+		ExecutorService es = Executors.newFixedThreadPool(4);
+		for (int k = 0; k < 10; k++) {
 			es.submit(() -> {
-				try {
-					engine.writeSeries("testseries1223", Arrays.asList("cpu", "host1", "app1"), TimeUnit.MILLISECONDS,
-							timestamp+k, k);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				Random r = new Random();
+				for (int i = 0; i < 1000000; i++) {
+					try {
+						engine.writeSeries(r.nextInt(100) + "testseries1223", Arrays.asList("cpu", "host1", "app1"),
+								TimeUnit.MILLISECONDS, timestamp + (i*1000*60), i);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			});
 		}
+
 		es.shutdown();
 		es.awaitTermination(1000, TimeUnit.SECONDS);
 		engine.disconnect();
