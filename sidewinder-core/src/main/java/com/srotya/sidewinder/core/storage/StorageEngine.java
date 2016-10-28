@@ -49,9 +49,10 @@ public interface StorageEngine {
 	 * @param unit
 	 * @param timestamp
 	 * @param value
+	 * @return 
 	 * @throws IOException
 	 */
-	void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value) throws IOException;
+	void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value, Callback callback) throws IOException;
 	
 	/**
 	 * @param seriesName
@@ -62,6 +63,6 @@ public interface StorageEngine {
 	 * @param value
 	 * @throws IOException
 	 */
-	void writeSeries(String seriesName, List<String> tags,  TimeUnit unit, long timestamp, double value) throws IOException;
+	void writeSeries(String seriesName, List<String> tags,  TimeUnit unit, long timestamp, double value, Callback callback) throws IOException;
 
 }

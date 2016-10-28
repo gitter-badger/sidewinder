@@ -184,19 +184,18 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	}
 
 	@Override
-	public void writeSeriesPoint(byte[] rowKey, long timestamp, byte[] value) throws IOException {
-		String encodedKey = new String(rowKey);
-		synchronized (encodedKey.intern()) {
-			try {
-				TreeMap<Long, byte[]> map = seriesLookup.get(encodedKey);
-				ByteArrayOutputStream stream = new ByteArrayOutputStream((map.size() + 1) * 20);
-				Output output = new Output(stream);
-				kryoThreadLocal.get().writeObject(output, map);
-				output.close();
-				tsdb.put(rowKey, stream.toByteArray());
-			} catch (RocksDBException | ExecutionException e) {
-				throw new IOException(e);
-			}
+	public void writeSeriesPoint(WriteTask point) throws IOException {
+		String encodedKey = new String(point.getRowKey());
+		try {
+			TreeMap<Long, byte[]> map = seriesLookup.get(encodedKey);
+			map.put(point.getTimestamp(), point.getValue());
+			ByteArrayOutputStream stream = new ByteArrayOutputStream((map.size() + 1) * 20);
+			Output output = new Output(stream);
+			kryoThreadLocal.get().writeObject(output, map);
+			output.close();
+			tsdb.put(point.getRowKey(), stream.toByteArray());
+		} catch (RocksDBException | ExecutionException e) {
+			throw new IOException(e);
 		}
 	}
 

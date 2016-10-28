@@ -18,6 +18,7 @@ package com.srotya.sidewinder.core.storage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.srotya.sidewinder.core.utils.ByteUtils;
@@ -27,12 +28,31 @@ import com.srotya.sidewinder.core.utils.TimeUtils;
  * @author ambudsharma
  *
  */
-public abstract class AbstractStorageEngine implements StorageEngine {
+public abstract class AbstractStorageEngine implements StorageEngine, Runnable {
 
 	public static final int BUCKET_SIZE = 4096;
+	private ArrayBlockingQueue<WriteTask> taskQueue = new ArrayBlockingQueue<>(1024*4);
+	private volatile boolean control = true;
+
+	@Override
+	public void run() {
+		while (control) {
+			WriteTask poll;
+			try {
+				poll = taskQueue.take();
+				writeSeriesPoint(poll);
+				poll.getCallback().complete();
+			} catch (InterruptedException e) {
+				break;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
 
 	public abstract byte[] indexIdentifier(String identifier) throws IOException;
-	
+
 	public byte[] buildRowKey(String seriesName, List<String> tags, TimeUnit unit, long timestamp) throws IOException {
 		/**
 		 * 3 bytes for each tag, 3 bytes for series name and 4 bytes for the
@@ -55,21 +75,35 @@ public abstract class AbstractStorageEngine implements StorageEngine {
 	}
 
 	@Override
-	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, 
-			long value) throws IOException {
-		byte[] rowKey = buildRowKey(seriesName, tags, unit, timestamp);
+	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value,
+			Callback callback) throws IOException {
 		byte[] valueBytes = ByteUtils.longToBytes(value);
-		writeSeriesPoint(rowKey, timestamp, valueBytes);
+		writeSeries(seriesName, tags, unit, timestamp, valueBytes, callback);
+	}
+	
+	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, byte[] value,
+			Callback callback)  throws IOException {
+		byte[] rowKey = buildRowKey(seriesName, tags, unit, timestamp);
+		try {
+			taskQueue.put(new WriteTask(rowKey, timestamp, value, callback));
+		} catch (InterruptedException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Override
-	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, 
-			double value) throws IOException {
-		byte[] rowKey = buildRowKey(seriesName, tags, unit, timestamp);
+	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, double value,
+			Callback callback) throws IOException {
 		byte[] valueBytes = ByteUtils.doubleToBytes(value);
-		writeSeriesPoint(rowKey, timestamp, valueBytes);
+		writeSeries(seriesName, tags, unit, timestamp, valueBytes, callback);
 	}
-	
-	public abstract void writeSeriesPoint(byte[] rowKey, long timestamp, byte[] value) throws IOException;
 
+	public abstract void writeSeriesPoint(WriteTask point) throws IOException;
+
+	/**
+	 * 
+	 */
+	public void stop() {
+		control = false;
+	}
 }

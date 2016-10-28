@@ -68,7 +68,7 @@ public class TestAbstractStorageEngine {
 		}
 
 		@Override
-		public void writeSeriesPoint(byte[] rowKey, long tsBucketOffset, byte[] value) throws IOException {
+		public void writeSeriesPoint(WriteTask point) throws IOException {
 			// do nothing
 		}
 
