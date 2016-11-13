@@ -216,7 +216,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	public List<String> getSeries() throws Exception {
 		List<String> series = new ArrayList<>();
 		RocksIterator itr = indexdb.newIterator();
-		itr.next();
+		itr.seekToFirst();
 		while (itr.isValid()) {
 			String seriesName = new String(itr.key());
 			if (seriesName.startsWith("series_")) {
@@ -239,9 +239,10 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 
 	public void print() throws Exception {
 		RocksIterator itr = tsdb.newIterator();
+		itr.seekToFirst();
 		do {
-			itr.next();
 			System.out.println(new String(itr.key()));
+			itr.next();
 		}while(itr.isValid());
 	}
 }
