@@ -19,16 +19,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 
 import org.rocksdb.CompactionStyle;
-import org.rocksdb.CompressionType;
+import org.rocksdb.FlushOptions;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
 import org.rocksdb.WriteOptions;
 import org.rocksdb.util.SizeUnit;
 
@@ -58,6 +61,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	private String tsdbMemDirectory;
 	private String indexdbMemDirectory;
 	private String indexdbWalDirectory;
+	private FlushOptions flushOptions;
 	private static final ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
 		@Override
 		protected Kryo initialValue() {
@@ -85,22 +89,26 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 			wipeDirectory(indexdbWalDirectory);
 			wipeDirectory(indexdbMemDirectory);
 		}
-		tsdbOptions = new Options().setCreateIfMissing(true).setAllowMmapReads(true).setAllowMmapWrites(true)
+		tsdbOptions = new Options().setCreateIfMissing(true)
+				.setAllowMmapReads(true).setAllowMmapWrites(true)
 				.setIncreaseParallelism(2).setFilterDeletes(true).setMaxBackgroundCompactions(10)
 				.setMaxBackgroundFlushes(10).setDisableDataSync(false).setUseFsync(false).setUseAdaptiveMutex(false)
 				.setWriteBufferSize(1 * SizeUnit.MB).setCompactionStyle(CompactionStyle.UNIVERSAL)
-				.setCompressionType(CompressionType.SNAPPY_COMPRESSION).setMaxWriteBufferNumber(6).setWalTtlSeconds(60)
-				.setWalSizeLimitMB(512).setMaxTotalWalSize(1024 * SizeUnit.MB).setErrorIfExists(false)
-				.setAllowOsBuffer(true).setWalDir(tsdbWalDirectory).setOptimizeFiltersForHits(false);
+				.setMaxWriteBufferNumber(6).setWalTtlSeconds(60).setWalSizeLimitMB(512)
+				.setMaxTotalWalSize(1024 * SizeUnit.MB).setErrorIfExists(false).setAllowOsBuffer(true)
+				.setWalDir(tsdbWalDirectory).setOptimizeFiltersForHits(false);
 
-		indexdbOptions = new Options().setCreateIfMissing(true).setAllowMmapReads(true).setAllowMmapWrites(true)
+		indexdbOptions = new Options().setCreateIfMissing(true)
+				.setAllowMmapReads(true).setAllowMmapWrites(true)
 				.setIncreaseParallelism(2).setFilterDeletes(true).setMaxBackgroundCompactions(10)
 				.setMaxBackgroundFlushes(10).setDisableDataSync(false).setUseFsync(false).setUseAdaptiveMutex(false)
 				.setWriteBufferSize(1 * SizeUnit.MB).setCompactionStyle(CompactionStyle.UNIVERSAL)
-				.setCompressionType(CompressionType.SNAPPY_COMPRESSION).setMaxWriteBufferNumber(6).setWalTtlSeconds(60)
-				.setWalSizeLimitMB(512).setMaxTotalWalSize(1024 * SizeUnit.MB).setErrorIfExists(false)
-				.setAllowOsBuffer(true).setWalDir(indexdbWalDirectory).setOptimizeFiltersForHits(false);
+				.setMaxWriteBufferNumber(6).setWalTtlSeconds(60).setWalSizeLimitMB(512)
+				.setMaxTotalWalSize(1024 * SizeUnit.MB).setErrorIfExists(false).setAllowOsBuffer(true)
+				.setWalDir(indexdbWalDirectory).setOptimizeFiltersForHits(false);
 		writeOptions = new WriteOptions().setDisableWAL(false).setSync(false);
+		
+		flushOptions = new FlushOptions().setWaitForFlush(true);
 	}
 
 	private void wipeDirectory(String directory) {
@@ -135,6 +143,9 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 
 	@Override
 	public void disconnect() throws IOException {
+		if(flushOptions!=null) {
+			flushOptions.close();
+		}
 		if (tsdb != null) {
 			tsdb.close();
 		}
@@ -167,7 +178,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 		}
 	}
 
-	public TreeMap<Long, byte[]> getTreeFromDS(String rowKey) throws RocksDBException {
+	public TreeMap<Long, byte[]> getTreeFromDS(String rowKey) throws Exception {
 		return getTreeFromDS(rowKey.getBytes());
 	}
 
@@ -188,6 +199,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 		String encodedKey = new String(point.getRowKey());
 		try {
 			TreeMap<Long, byte[]> map = seriesLookup.get(encodedKey);
+			indexdb.put(point.getSeriesName(), point.getSeriesName());
 			map.put(point.getTimestamp(), point.getValue());
 			ByteArrayOutputStream stream = new ByteArrayOutputStream((map.size() + 1) * 20);
 			Output output = new Output(stream);
@@ -195,8 +207,41 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 			output.close();
 			tsdb.put(point.getRowKey(), stream.toByteArray());
 		} catch (RocksDBException | ExecutionException e) {
+			e.printStackTrace();
 			throw new IOException(e);
 		}
 	}
 
+	@Override
+	public List<String> getSeries() throws Exception {
+		List<String> series = new ArrayList<>();
+		RocksIterator itr = indexdb.newIterator();
+		itr.next();
+		while (itr.isValid()) {
+			String seriesName = new String(itr.key());
+			if (seriesName.startsWith("series_")) {
+				series.add(seriesName);
+			}
+			itr.next();
+		}
+		return series;
+	}
+	
+	@Override
+	public void flush() throws IOException {
+		try {
+			tsdb.flush(flushOptions);
+			System.err.println("Flushed");
+		} catch (RocksDBException e) {
+			throw new IOException(e);
+		}
+	}
+
+	public void print() throws Exception {
+		RocksIterator itr = tsdb.newIterator();
+		do {
+			itr.next();
+			System.out.println(new String(itr.key()));
+		}while(itr.isValid());
+	}
 }

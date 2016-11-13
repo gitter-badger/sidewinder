@@ -15,15 +15,12 @@
  */
 package com.srotya.sidewinder.core.storage;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
 
@@ -34,48 +31,36 @@ import org.junit.Test;
 public class TestRocksDBStorageEngine implements Callback {
 
 	@Test
-	public void testBaseTimeSeriesWrites() throws IOException, InterruptedException {
+	public void testBaseTimeSeriesWrites() throws Exception {
 		AbstractStorageEngine engine = new RocksDBStorageEngine();
 		engine.configure(new HashMap<>());
 		engine.connect();
 		
-		AtomicInteger counter = new AtomicInteger(0);
-		
-		ScheduledExecutorService mon = Executors.newScheduledThreadPool(1);
-		mon.scheduleAtFixedRate(()->{
-			System.out.println("EPS:"+counter.getAndSet(0));
-		}, 0, 1	, TimeUnit.SECONDS);
-		
-		ExecutorService es1 = Executors.newSingleThreadExecutor();
-		es1.submit(engine);
-		
 		long timestamp = System.currentTimeMillis();
-		ExecutorService es = Executors.newFixedThreadPool(4);
-		
-		for (int k = 0; k < 10; k++) {
-			es.submit(() -> {
-				Random r = new Random();
-				for (int i = 0; i < 1000000; i++) {
-					try {
-						engine.writeSeries(r.nextInt(10000) + "testseries1223", Arrays.asList("cpu", "host1", "app1"),
-								TimeUnit.MILLISECONDS, timestamp + (i * 1000 * 60), i, this);
-						if (i % 1000 == 0) {
-							counter.addAndGet(1000);
-						}
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			});
-		}
+		ExecutorService es = Executors.newCachedThreadPool();
+		es.submit(engine);
+		engine.writeSeries(10 + "testseries1223", Arrays.asList("cpu", "host1", "app1"),
+				TimeUnit.MILLISECONDS, timestamp + (2 * 1000 * 60), 10, this);
 
+		byte[] rowKey = engine.buildRowKey(10 + "testseries1223", Arrays.asList("cpu", "host1", "app1"),
+				TimeUnit.MILLISECONDS, timestamp + (2 * 1000 * 60));
+		engine.stop();
 		es.shutdown();
 		es.awaitTermination(1000, TimeUnit.SECONDS);
-		engine.stop();
-		es1.shutdown();
-		mon.shutdown();
+		TreeMap<Long, byte[]> values = engine.getTreeFromDS(rowKey);
+		System.out.println("Values:"+values);
+		engine.print();
+		engine.getSeries().forEach(series->System.out.println(series));
 		engine.disconnect();
+//		try {
+//			System.out.println("Series");
+//			for (String string : engine.getSeries()) {
+//				System.out.println("Series:"+string);
+//			}
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 
 	@Override

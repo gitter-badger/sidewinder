@@ -21,6 +21,7 @@ package com.srotya.sidewinder.core.storage;
  */
 public class WriteTask {
 
+	private byte[] seriesName;
 	private byte[] rowKey;
 	private long timestamp;
 	private byte[] value;
@@ -29,7 +30,8 @@ public class WriteTask {
 	public WriteTask() {
 	}
 
-	public WriteTask(byte[] rowKey, long timestamp, byte[] value, Callback callback) {
+	public WriteTask(byte[] seriesName, byte[] rowKey, long timestamp, byte[] value, Callback callback) {
+		this.seriesName = seriesName;
 		this.rowKey = rowKey;
 		this.timestamp = timestamp;
 		this.value = value;
@@ -83,6 +85,20 @@ public class WriteTask {
 	 */
 	public Callback getCallback() {
 		return callback;
+	}
+
+	/**
+	 * @return
+	 */
+	public byte[] getSeriesName() {
+		return seriesName;
+	}
+
+	/**
+	 * @param seriesName
+	 */
+	public void setSeriesName(byte[] seriesName) {
+		this.seriesName = seriesName;
 	}
 	
 }

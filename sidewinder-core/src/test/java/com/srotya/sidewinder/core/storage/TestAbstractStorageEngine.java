@@ -19,7 +19,9 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
@@ -78,6 +80,29 @@ public class TestAbstractStorageEngine {
 
 		@Override
 		public void disconnect() throws IOException {
+		}
+
+		@Override
+		public TreeMap<Long, byte[]> getTreeFromDS(byte[] rowKey) throws Exception {
+			return null;
+		}
+
+		@Override
+		public List<String> getSeries() throws Exception {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void print() throws Exception {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void flush() throws IOException {
+			// TODO Auto-generated method stub
+			
 		}
 
 	}

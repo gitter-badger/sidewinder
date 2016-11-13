@@ -18,8 +18,10 @@ package com.srotya.sidewinder.core.storage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.srotya.sidewinder.core.utils.ByteUtils;
 import com.srotya.sidewinder.core.utils.TimeUtils;
@@ -31,12 +33,12 @@ import com.srotya.sidewinder.core.utils.TimeUtils;
 public abstract class AbstractStorageEngine implements StorageEngine, Runnable {
 
 	public static final int BUCKET_SIZE = 4096;
-	private ArrayBlockingQueue<WriteTask> taskQueue = new ArrayBlockingQueue<>(1024*4);
-	private volatile boolean control = true;
+	private ArrayBlockingQueue<WriteTask> taskQueue = new ArrayBlockingQueue<>(1024 * 4);
+	private AtomicBoolean control = new AtomicBoolean(true);
 
 	@Override
 	public void run() {
-		while (control) {
+		while (control.get() || taskQueue.size() > 0) {
 			WriteTask poll;
 			try {
 				poll = taskQueue.take();
@@ -48,6 +50,10 @@ public abstract class AbstractStorageEngine implements StorageEngine, Runnable {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		}
+		try {
+			flush();
+		} catch (IOException e) {
 		}
 	}
 
@@ -80,12 +86,12 @@ public abstract class AbstractStorageEngine implements StorageEngine, Runnable {
 		byte[] valueBytes = ByteUtils.longToBytes(value);
 		writeSeries(seriesName, tags, unit, timestamp, valueBytes, callback);
 	}
-	
+
 	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, byte[] value,
-			Callback callback)  throws IOException {
+			Callback callback) throws IOException {
 		byte[] rowKey = buildRowKey(seriesName, tags, unit, timestamp);
 		try {
-			taskQueue.put(new WriteTask(rowKey, timestamp, value, callback));
+			taskQueue.put(new WriteTask(("series_" + seriesName).getBytes(), rowKey, timestamp, value, callback));
 		} catch (InterruptedException e) {
 			throw new IOException(e);
 		}
@@ -100,10 +106,18 @@ public abstract class AbstractStorageEngine implements StorageEngine, Runnable {
 
 	public abstract void writeSeriesPoint(WriteTask point) throws IOException;
 
+	public abstract TreeMap<Long, byte[]> getTreeFromDS(byte[] rowKey) throws Exception;
+
+	public abstract List<String> getSeries() throws Exception;
+	
+	public abstract void flush() throws IOException;
+	
+	public abstract void print() throws Exception;
+	
 	/**
 	 * 
 	 */
 	public void stop() {
-		control = false;
+		control.set(false);
 	}
 }
