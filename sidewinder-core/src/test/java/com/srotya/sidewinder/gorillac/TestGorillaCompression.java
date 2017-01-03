@@ -17,8 +17,8 @@ package com.srotya.sidewinder.gorillac;
 
 import com.srotya.sidewinder.gorillac.ByteBufferBitInput;
 import com.srotya.sidewinder.gorillac.ByteBufferBitOutput;
-import com.srotya.sidewinder.gorillac.Compressor;
-import com.srotya.sidewinder.gorillac.Decompressor;
+import com.srotya.sidewinder.gorillac.Writer;
+import com.srotya.sidewinder.gorillac.Reader;
 import com.srotya.sidewinder.gorillac.Pair;
 
 import static org.junit.Assert.*;
@@ -40,7 +40,7 @@ import org.junit.Test;
  *
  * @author Michael Burman
  */
-public class EncodeTest {
+public class TestGorillaCompression {
 
 	@Test
 	public void simpleEncodeAndDecodeTest() throws Exception {
@@ -48,7 +48,7 @@ public class EncodeTest {
 
 		ByteBufferBitOutput output = new ByteBufferBitOutput();
 
-		Compressor c = new Compressor(now, output);
+		Writer c = new Writer(now, output);
 
 		Pair[] pairs = { new Pair(now + 10, Double.doubleToRawLongBits(1.0)),
 				new Pair(now + 20, Double.doubleToRawLongBits(-2.0)),
@@ -66,7 +66,7 @@ public class EncodeTest {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Decompressor d = new Decompressor(input, pairs.length);
+		Reader d = new Reader(input, pairs.length);
 
 		// Replace with stream once decompressor supports it
 		for (int i = 0; i < pairs.length; i++) {
@@ -87,7 +87,7 @@ public class EncodeTest {
 		long now = LocalDateTime.of(2015, Month.MARCH, 02, 00, 00).toInstant(ZoneOffset.UTC).toEpochMilli();
 
 		ByteBufferBitOutput output = new ByteBufferBitOutput();
-		Compressor c = new Compressor(now, output);
+		Writer c = new Writer(now, output);
 
 		ByteBuffer bb = ByteBuffer.allocate(5 * 2 * Long.BYTES);
 
@@ -116,7 +116,7 @@ public class EncodeTest {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Decompressor d = new Decompressor(input, 5);
+		Reader d = new Reader(input, 5);
 
 		// Replace with stream once decompressor supports it
 		for (int i = 0; i < 5; i++) {
@@ -146,7 +146,7 @@ public class EncodeTest {
 			bb.putDouble(i * Math.random());
 		}
 
-		Compressor c = new Compressor(blockStart, output);
+		Writer c = new Writer(blockStart, output);
 
 		bb.flip();
 
@@ -162,7 +162,7 @@ public class EncodeTest {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Decompressor d = new Decompressor(input, amountOfPoints);
+		Reader d = new Reader(input, amountOfPoints);
 
 		for (int i = 0; i < amountOfPoints; i++) {
 			long tStamp = bb.getLong();
@@ -183,14 +183,14 @@ public class EncodeTest {
 
 		ByteBufferBitOutput output = new ByteBufferBitOutput();
 
-		Compressor c = new Compressor(now, output);
+		Writer c = new Writer(now, output);
 		c.close();
 
 		ByteBuffer byteBuffer = output.getByteBuffer();
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Decompressor d = new Decompressor(input, 0);
+		Reader d = new Reader(input, 0);
 
 		assertNull(d.readPair());
 	}
@@ -213,7 +213,7 @@ public class EncodeTest {
 			bb.putLong(ThreadLocalRandom.current().nextLong(Integer.MAX_VALUE));
 		}
 
-		Compressor c = new Compressor(blockStart, output);
+		Writer c = new Writer(blockStart, output);
 
 		bb.flip();
 
@@ -229,7 +229,7 @@ public class EncodeTest {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Decompressor d = new Decompressor(input, amountOfPoints);
+		Reader d = new Reader(input, amountOfPoints);
 
 		for (int i = 0; i < amountOfPoints; i++) {
 			long tStamp = bb.getLong();

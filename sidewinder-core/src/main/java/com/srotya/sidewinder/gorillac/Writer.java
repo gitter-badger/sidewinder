@@ -20,8 +20,10 @@ package com.srotya.sidewinder.gorillac;
  * Paper. Value compression is for floating points only.
  *
  * @author Michael Burman
+ * 
+ * Modified by @author Ambud to remove EOF markers
  */
-public class Compressor {
+public class Writer {
 
 	private int storedLeadingZeros = Integer.MAX_VALUE;
 	private int storedTrailingZeros = 0;
@@ -36,7 +38,7 @@ public class Compressor {
 	private BitOutput out;
 
 	// We should have access to the series?
-	public Compressor(long timestamp, BitOutput output) {
+	public Writer(long timestamp, BitOutput output) {
 		blockTimestamp = timestamp;
 		out = output;
 		addHeader(timestamp);

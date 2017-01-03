@@ -15,6 +15,8 @@
  */
 package com.srotya.sidewinder.core;
 
+import com.srotya.sidewinder.core.storage.AbstractStorageEngine;
+
 import io.dropwizard.Application;
 import io.dropwizard.setup.Environment;
 
@@ -23,7 +25,10 @@ import io.dropwizard.setup.Environment;
  *
  */
 public class SidewinderServer extends Application<SidewinderConfig>{
-
+	
+	private AbstractStorageEngine storageEngine;
+	private static SidewinderServer sidewinderServer;
+	
 	@Override
 	public void run(SidewinderConfig config, Environment env) throws Exception {
 	}
@@ -34,7 +39,22 @@ public class SidewinderServer extends Application<SidewinderConfig>{
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		new SidewinderServer().run(args);
+		sidewinderServer = new SidewinderServer();
+		sidewinderServer.run(args);
 	}
 
+	/**
+	 * @return
+	 */
+	public static SidewinderServer getSidewinderServer() {
+		return sidewinderServer;
+	}
+	
+	/**
+	 * @return
+	 */
+	public AbstractStorageEngine getStorageEngine() {
+		return storageEngine;
+	}
+	
 }

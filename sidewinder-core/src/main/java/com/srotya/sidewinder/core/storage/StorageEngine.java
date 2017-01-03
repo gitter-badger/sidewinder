@@ -18,42 +18,46 @@ package com.srotya.sidewinder.core.storage;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
  * @author ambudsharma
  */
 public interface StorageEngine {
-	
+
 	/**
 	 * @param conf
 	 * @throws IOException
 	 */
 	public void configure(Map<String, String> conf) throws IOException;
-	
+
 	/**
 	 * Connect to the storage engine
+	 * 
 	 * @throws IOException
 	 */
 	public void connect() throws IOException;
-	
+
 	/**
 	 * Disconnect from the storage engine
+	 * 
 	 * @throws IOException
 	 */
-	public void disconnect()  throws IOException;
-	
+	public void disconnect() throws IOException;
+
 	/**
 	 * @param seriesName
 	 * @param tags
 	 * @param unit
 	 * @param timestamp
 	 * @param value
-	 * @return 
+	 * @return
 	 * @throws IOException
 	 */
-	void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value, Callback callback) throws IOException;
-	
+	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value,
+			Callback callback) throws IOException;
+
 	/**
 	 * @param seriesName
 	 * @param tags
@@ -63,6 +67,17 @@ public interface StorageEngine {
 	 * @param value
 	 * @throws IOException
 	 */
-	void writeSeries(String seriesName, List<String> tags,  TimeUnit unit, long timestamp, double value, Callback callback) throws IOException;
+	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, double value,
+			Callback callback) throws IOException;
 
+	public Set<String> getDatabases() throws Exception;
+
+	public Set<String> getSeries(String dbName) throws Exception;
+	
+	public void deleteAllData() throws Exception;
+	
+	public boolean checkIfExists(String dbName) throws Exception;
+	
+	public void truncateDatabase(String dbName) throws Exception;
+	
 }

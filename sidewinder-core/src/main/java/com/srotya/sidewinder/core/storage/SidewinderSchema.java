@@ -15,7 +15,10 @@
  */
 package com.srotya.sidewinder.core.storage;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
@@ -33,6 +36,16 @@ public class SidewinderSchema extends AbstractSchema {
 	
 	@Override
 	protected Map<String, Table> getTableMap() {
+		try {
+			Set<String> series = engine.getSeries(null);
+			Map<String, Table> tableMap = new HashMap<>();
+			for(String seriesName:series) {
+				tableMap.put(seriesName, new SidewinderTable(seriesName, engine));
+			}
+			return tableMap;
+ 		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		return super.getTableMap();
 	}
 

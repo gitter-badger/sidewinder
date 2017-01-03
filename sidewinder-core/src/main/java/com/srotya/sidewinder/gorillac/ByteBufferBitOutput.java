@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
  * An implementation of BitOutput interface that uses off-heap storage.
  *
  * @author Michael Burman
+ * 
  */
 public class ByteBufferBitOutput implements BitOutput {
 	public static final int DEFAULT_ALLOCATION = 4096;
@@ -45,11 +46,13 @@ public class ByteBufferBitOutput implements BitOutput {
 	 *            New initialsize to use
 	 */
 	public ByteBufferBitOutput(int initialSize) {
+//		bb = ByteBuffer.allocate(initialSize);
 		bb = ByteBuffer.allocateDirect(initialSize);
 		b = bb.get(bb.position());
 	}
 
 	private void expandAllocation() {
+//		ByteBuffer largerBB = ByteBuffer.allocate(bb.capacity() * 2);
 		ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity() * 2);
 		bb.flip();
 		largerBB.put(bb);

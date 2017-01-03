@@ -35,7 +35,7 @@ public abstract class AbstractStorageEngine implements StorageEngine, Runnable {
 	public static final int BUCKET_SIZE = 4096;
 	private ArrayBlockingQueue<WriteTask> taskQueue = new ArrayBlockingQueue<>(1024 * 4);
 	private AtomicBoolean control = new AtomicBoolean(true);
-
+	
 	@Override
 	public void run() {
 		while (control.get() || taskQueue.size() > 0) {
@@ -81,35 +81,33 @@ public abstract class AbstractStorageEngine implements StorageEngine, Runnable {
 	}
 
 	@Override
-	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value,
+	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value,
 			Callback callback) throws IOException {
 		byte[] valueBytes = ByteUtils.longToBytes(value);
-		writeSeries(seriesName, tags, unit, timestamp, valueBytes, callback);
+		writeSeries(dbName, seriesName, tags, unit, timestamp, valueBytes, callback);
 	}
 
-	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, byte[] value,
+	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, byte[] value,
 			Callback callback) throws IOException {
 		byte[] rowKey = buildRowKey(seriesName, tags, unit, timestamp);
 		try {
-			taskQueue.put(new WriteTask(("series_" + seriesName).getBytes(), rowKey, timestamp, value, callback));
+			taskQueue.put(new WriteTask(("db_"+dbName+"series_" + seriesName).getBytes(), rowKey, timestamp, value, callback));
 		} catch (InterruptedException e) {
 			throw new IOException(e);
 		}
 	}
 
 	@Override
-	public void writeSeries(String seriesName, List<String> tags, TimeUnit unit, long timestamp, double value,
+	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, double value,
 			Callback callback) throws IOException {
 		byte[] valueBytes = ByteUtils.doubleToBytes(value);
-		writeSeries(seriesName, tags, unit, timestamp, valueBytes, callback);
+		writeSeries(dbName, seriesName, tags, unit, timestamp, valueBytes, callback);
 	}
 
 	public abstract void writeSeriesPoint(WriteTask point) throws IOException;
 
 	public abstract TreeMap<Long, byte[]> getTreeFromDS(byte[] rowKey) throws Exception;
 
-	public abstract List<String> getSeries() throws Exception;
-	
 	public abstract void flush() throws IOException;
 	
 	public abstract void print() throws Exception;

@@ -15,9 +15,9 @@
  */
 package com.srotya.sidewinder.core.storage;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -32,35 +32,43 @@ public class TestRocksDBStorageEngine implements Callback {
 
 	@Test
 	public void testBaseTimeSeriesWrites() throws Exception {
-		AbstractStorageEngine engine = new RocksDBStorageEngine();
+		// AbstractStorageEngine engine = new RocksDBStorageEngine();
+		GorillaStorageEngine engine = new GorillaStorageEngine();
 		engine.configure(new HashMap<>());
 		engine.connect();
-		
-		long timestamp = System.currentTimeMillis();
-		ExecutorService es = Executors.newCachedThreadPool();
-		es.submit(engine);
-		engine.writeSeries(10 + "testseries1223", Arrays.asList("cpu", "host1", "app1"),
-				TimeUnit.MILLISECONDS, timestamp + (2 * 1000 * 60), 10, this);
 
-		byte[] rowKey = engine.buildRowKey(10 + "testseries1223", Arrays.asList("cpu", "host1", "app1"),
-				TimeUnit.MILLISECONDS, timestamp + (2 * 1000 * 60));
-		engine.stop();
+		long ts1 = System.currentTimeMillis();
+
+		ExecutorService es = Executors.newCachedThreadPool();
+
+		for (int k = 0; k < 500; k++) {
+			final int p = k;
+			es.submit(() -> {
+				long ts = System.currentTimeMillis();
+				for (int i = 0; i < 1000; i++) {
+					try {
+						engine.writeSeries("test", "helo" + p, Arrays.asList(""), TimeUnit.MILLISECONDS, ts + i * 60,
+								ts + i, null);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			});
+		}
 		es.shutdown();
-		es.awaitTermination(1000, TimeUnit.SECONDS);
-		TreeMap<Long, byte[]> values = engine.getTreeFromDS(rowKey);
-		System.out.println("Values:"+values);
-		engine.print();
-		engine.getSeries().forEach(series->System.out.println(series));
-		engine.disconnect();
-//		try {
-//			System.out.println("Series");
-//			for (String string : engine.getSeries()) {
-//				System.out.println("Series:"+string);
-//			}
-//		} catch (Exception e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+		es.awaitTermination(10, TimeUnit.SECONDS);
+
+		System.out.println((System.currentTimeMillis() - ts1) + "\tms");
+		// try {
+		// System.out.println("Series");
+		// for (String string : engine.getSeries()) {
+		// System.out.println("Series:"+string);
+		// }
+		// } catch (Exception e) {
+		// // TODO Auto-generated catch block
+		// e.printStackTrace();
+		// }
 	}
 
 	@Override

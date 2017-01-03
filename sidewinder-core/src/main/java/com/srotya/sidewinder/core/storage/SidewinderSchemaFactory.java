@@ -21,14 +21,26 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaFactory;
 import org.apache.calcite.schema.SchemaPlus;
 
+import com.srotya.sidewinder.core.SidewinderServer;
+
 /**
  * @author ambudsharma
  */
 public class SidewinderSchemaFactory implements SchemaFactory {
 
+	public SidewinderSchemaFactory() {
+	}
+
 	@Override
 	public Schema create(SchemaPlus parentSchema, String name, Map<String, Object> operand) {
-		return null;
+		SidewinderServer server = SidewinderServer.getSidewinderServer();
+		if (server == null || server.getStorageEngine()==null) {
+			// case when server wasn't started
+			return null;
+		} else {
+			AbstractStorageEngine engine = server.getStorageEngine();
+			return new SidewinderSchema(engine);
+		}
 	}
 
 }

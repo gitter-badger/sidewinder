@@ -19,10 +19,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 
@@ -213,13 +213,13 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	}
 
 	@Override
-	public List<String> getSeries() throws Exception {
-		List<String> series = new ArrayList<>();
+	public Set<String> getSeries(String dbName) throws Exception {
+		Set<String> series = new HashSet<>();
 		RocksIterator itr = indexdb.newIterator();
 		itr.seekToFirst();
 		while (itr.isValid()) {
 			String seriesName = new String(itr.key());
-			if (seriesName.startsWith("series_")) {
+			if (seriesName.startsWith(dbName+"_series_")) {
 				series.add(seriesName);
 			}
 			itr.next();
@@ -244,5 +244,39 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 			System.out.println(new String(itr.key()));
 			itr.next();
 		}while(itr.isValid());
+	}
+
+	@Override
+	public Set<String> getDatabases() throws Exception {
+		Set<String> databases = new HashSet<>();
+		RocksIterator itr = indexdb.newIterator();
+		itr.seekToFirst();
+		while (itr.isValid()) {
+			String seriesName = new String(itr.key());
+			if (seriesName.startsWith("db_")) {
+				String dbName = seriesName.split("_")[1];
+				databases.add(dbName);
+			}
+			itr.next();
+		}
+		return databases;
+	}
+
+	@Override
+	public void deleteAllData() throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean checkIfExists(String dbName) throws Exception {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void truncateDatabase(String dbName) throws Exception {
+		// TODO Auto-generated method stub
+		
 	}
 }

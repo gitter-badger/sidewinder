@@ -20,8 +20,10 @@ package com.srotya.sidewinder.gorillac;
  * pairs of timestamp and flaoting point value.
  *
  * @author Michael Burman
+ * 
+ *  Modified by @author Ambud to remove EOF markers and count based multi-threaded readers
  */
-public class Decompressor {
+public class Reader {
 
 	private int storedLeadingZeros = Integer.MAX_VALUE;
 	private int storedTrailingZeros = 0;
@@ -37,7 +39,7 @@ public class Decompressor {
 	private int pairCount;
 	private int counter;
 
-	public Decompressor(BitInput input, int pairCount) {
+	public Reader(BitInput input, int pairCount) {
 		in = input;
 		this.pairCount = pairCount;
 		readHeader();
@@ -64,7 +66,7 @@ public class Decompressor {
 		if (counter < pairCount) {
 			if (storedTimestamp == 0) {
 				// First item to read
-				storedDelta = in.getLong(Compressor.FIRST_DELTA_BITS);
+				storedDelta = in.getLong(Writer.FIRST_DELTA_BITS);
 				// if(storedDelta == (1<<27) - 1) {
 				// endOfStream = true;
 				// return;

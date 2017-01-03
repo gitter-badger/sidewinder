@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
@@ -88,12 +89,6 @@ public class TestAbstractStorageEngine {
 		}
 
 		@Override
-		public List<String> getSeries() throws Exception {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
 		public void print() throws Exception {
 			// TODO Auto-generated method stub
 			
@@ -101,6 +96,36 @@ public class TestAbstractStorageEngine {
 
 		@Override
 		public void flush() throws IOException {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public Set<String> getDatabases() throws Exception {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Set<String> getSeries(String dbName) throws Exception {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void deleteAllData() throws Exception {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public boolean checkIfExists(String dbName) throws Exception {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public void truncateDatabase(String dbName) throws Exception {
 			// TODO Auto-generated method stub
 			
 		}
