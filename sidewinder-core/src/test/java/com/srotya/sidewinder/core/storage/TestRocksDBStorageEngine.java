@@ -41,7 +41,7 @@ public class TestRocksDBStorageEngine implements Callback {
 
 		ExecutorService es = Executors.newCachedThreadPool();
 
-		for (int k = 0; k < 500; k++) {
+		for (int k = 0; k < 50000; k++) {
 			final int p = k;
 			es.submit(() -> {
 				long ts = System.currentTimeMillis();

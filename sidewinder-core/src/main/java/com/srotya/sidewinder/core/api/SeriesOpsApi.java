@@ -16,7 +16,6 @@
 package com.srotya.sidewinder.core.api;
 
 import java.util.List;
-import java.util.Map;
 import java.util.SortedMap;
 
 import javax.ws.rs.DELETE;
@@ -78,5 +77,5 @@ public class SeriesOpsApi {
 			throw new InternalServerErrorException(e);
 		}
 	}
-
+	
 }
