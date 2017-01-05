@@ -15,13 +15,8 @@
  */
 package com.srotya.sidewinder.gorillac;
 
-import com.srotya.sidewinder.gorillac.ByteBufferBitInput;
-import com.srotya.sidewinder.gorillac.ByteBufferBitOutput;
-import com.srotya.sidewinder.gorillac.Writer;
-import com.srotya.sidewinder.gorillac.Reader;
-import com.srotya.sidewinder.gorillac.Pair;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
@@ -33,12 +28,16 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * These are generic tests to test that input matches the output after
  * compression + decompression cycle, using both the timestamp and value
  * compression.
  *
  * @author Michael Burman
+ * 
+ * Modified by @author Ambud to switch to JUnit4
  */
 public class TestGorillaCompression {
 
@@ -50,16 +49,16 @@ public class TestGorillaCompression {
 
 		Writer c = new Writer(now, output);
 
-		Pair[] pairs = { new Pair(now + 10, Double.doubleToRawLongBits(1.0)),
-				new Pair(now + 20, Double.doubleToRawLongBits(-2.0)),
-				new Pair(now + 28, Double.doubleToRawLongBits(-2.5)),
-				new Pair(now + 84, Double.doubleToRawLongBits(65537)),
-				new Pair(now + 400, Double.doubleToRawLongBits(2147483650.0)),
-				new Pair(now + 2300, Double.doubleToRawLongBits(-16384)),
-				new Pair(now + 16384, Double.doubleToRawLongBits(2.8)),
-				new Pair(now + 16500, Double.doubleToRawLongBits(-38.0)) };
+		DataPoint[] pairs = { new DataPoint(now + 10, Double.doubleToRawLongBits(1.0)),
+				new DataPoint(now + 20, Double.doubleToRawLongBits(-2.0)),
+				new DataPoint(now + 28, Double.doubleToRawLongBits(-2.5)),
+				new DataPoint(now + 84, Double.doubleToRawLongBits(65537)),
+				new DataPoint(now + 400, Double.doubleToRawLongBits(2147483650.0)),
+				new DataPoint(now + 2300, Double.doubleToRawLongBits(-16384)),
+				new DataPoint(now + 16384, Double.doubleToRawLongBits(2.8)),
+				new DataPoint(now + 16500, Double.doubleToRawLongBits(-38.0)) };
 
-		Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getDoubleValue()));
+		Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getValue()));
 		c.close();
 
 		ByteBuffer byteBuffer = output.getByteBuffer();
@@ -70,9 +69,9 @@ public class TestGorillaCompression {
 
 		// Replace with stream once decompressor supports it
 		for (int i = 0; i < pairs.length; i++) {
-			Pair pair = d.readPair();
+			DataPoint pair = d.readPair();
 			assertEquals("Timestamp did not match", pairs[i].getTimestamp(), pair.getTimestamp());
-			assertEquals("Value did not match", pairs[i].getDoubleValue(), pair.getDoubleValue(), 0);
+			assertEquals("Value did not match", pairs[i].getValue(), pair.getValue(), 0);
 		}
 
 		assertNull(d.readPair());
@@ -120,9 +119,9 @@ public class TestGorillaCompression {
 
 		// Replace with stream once decompressor supports it
 		for (int i = 0; i < 5; i++) {
-			Pair pair = d.readPair();
+			DataPoint pair = d.readPair();
 			assertEquals("Timestamp did not match", bb.getLong(), pair.getTimestamp());
-			assertEquals("Value did not match", bb.getDouble(), pair.getDoubleValue(), 0);
+			assertEquals("Value did not match", bb.getDouble(), pair.getValue(), 0);
 		}
 		assertNull(d.readPair());
 	}
@@ -167,9 +166,9 @@ public class TestGorillaCompression {
 		for (int i = 0; i < amountOfPoints; i++) {
 			long tStamp = bb.getLong();
 			double val = bb.getDouble();
-			Pair pair = d.readPair();
+			DataPoint pair = d.readPair();
 			assertEquals("Expected timestamp did not match at point " + i, tStamp, pair.getTimestamp());
-			assertEquals(val, pair.getDoubleValue(), 0);
+			assertEquals(val, pair.getValue(), 0);
 		}
 		assertNull(d.readPair());
 	}
@@ -234,7 +233,7 @@ public class TestGorillaCompression {
 		for (int i = 0; i < amountOfPoints; i++) {
 			long tStamp = bb.getLong();
 			long val = bb.getLong();
-			Pair pair = d.readPair();
+			DataPoint pair = d.readPair();
 			assertEquals("Expected timestamp did not match at point " + i, tStamp, pair.getTimestamp());
 			assertEquals(val, pair.getLongValue());
 		}

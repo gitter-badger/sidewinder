@@ -15,6 +15,8 @@
  */
 package com.srotya.sidewinder.gorillac;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * Decompresses a compressed stream done created by the Compressor. Returns
  * pairs of timestamp and flaoting point value.
@@ -54,12 +56,12 @@ public class Reader {
 	 *
 	 * @return Pair if there's next value, null if series is done.
 	 */
-	public Pair readPair() {
+	public DataPoint readPair() {
 		next();
 		if (endOfStream) {
 			return null;
 		}
-		return new Pair(storedTimestamp, storedVal);
+		return new DataPoint(storedTimestamp, storedVal);
 	}
 
 	private void next() {

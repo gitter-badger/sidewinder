@@ -1,6 +1,5 @@
 package com.srotya.sidewinder.core.sql.parser;
 
-import java.util.List;
 import java.util.Stack;
 
 // Generated from SQLParser.g4 by ANTLR 4.6
