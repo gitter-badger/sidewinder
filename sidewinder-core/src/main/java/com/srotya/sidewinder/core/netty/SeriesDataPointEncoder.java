@@ -35,10 +35,12 @@ public class SeriesDataPointEncoder extends MessageToByteEncoder<List<DataPoint>
 		for (DataPoint dataPoint : dataPoints) {
 			encodeDPointToBuf(buf, dataPoint);
 		}
-		System.err.println("Buffer size:" + buf.capacity());
 	}
 
 	public static void encodeDPointToBuf(ByteBuf buf, DataPoint dataPoint) {
+		byte[] bytes = dataPoint.getSeriesName().getBytes();
+		buf.writeInt(bytes.length);
+		buf.writeBytes(bytes);
 		buf.writeLong(dataPoint.getTimestamp());
 		if (dataPoint.isFp()) {
 			buf.writeByte('0');
@@ -47,9 +49,6 @@ public class SeriesDataPointEncoder extends MessageToByteEncoder<List<DataPoint>
 			buf.writeByte('1');
 			buf.writeLong(dataPoint.getLongValue());
 		}
-		byte[] bytes = dataPoint.getSeriesName().getBytes();
-		buf.writeInt(bytes.length);
-		buf.writeBytes(bytes);
 	}
 
 }

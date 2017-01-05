@@ -49,7 +49,7 @@ public class NettyIngestionServer {
 
 	public void start() throws InterruptedException {
 		EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-		EventLoopGroup workerGroup = new NioEventLoopGroup(3);
+		EventLoopGroup workerGroup = new NioEventLoopGroup(1);
 
 		ServerBootstrap bs = new ServerBootstrap();
 		channel = bs.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
@@ -59,7 +59,7 @@ public class NettyIngestionServer {
 					@Override
 					protected void initChannel(SocketChannel ch) throws Exception {
 						ChannelPipeline p = ch.pipeline();
-						p.addLast(new LengthFieldBasedFrameDecoder(1500, 0, 4, 0, 4));
+						p.addLast(new LengthFieldBasedFrameDecoder(3000, 0, 4, 0, 4));
 						p.addLast(new SeriesDataPointDecoder());
 						p.addLast(new SeriesDataPointWriter(storageEngine));
 					}

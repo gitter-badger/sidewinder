@@ -33,17 +33,26 @@ public class SeriesDataPointDecoder extends ReplayingDecoder<Void> {
 		int dpCount = buf.readInt();
 		for (int i = 0; i < dpCount; i++) {
 			DataPoint d = decodeBufToDPoint(buf);
-			output.add(d);
+			if (d == null) {
+				System.out.println("Bad data point");
+				return;
+			} else {
+				output.add(d);
+			}
 		}
 	}
 
 	public static DataPoint decodeBufToDPoint(ByteBuf buf) {
 		int seriesNameLength = buf.readInt();
+		if(seriesNameLength<0) {
+			return null;
+		}
 		byte[] b = new byte[seriesNameLength];
 		buf.readBytes(b);
 		String seriesName = new String(b);
 		long timestamp = buf.readLong();
-		if (buf.readByte() == '0') {
+		byte flag = buf.readByte();
+		if (flag == '0') {
 			double value = buf.readDouble();
 			return new DataPoint(seriesName, timestamp, value);
 		} else {

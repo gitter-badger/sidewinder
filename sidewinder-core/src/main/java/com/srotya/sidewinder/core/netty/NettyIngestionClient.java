@@ -35,7 +35,7 @@ import io.netty.handler.codec.LengthFieldPrepender;
 public class NettyIngestionClient {
 
 	public static void main(String[] args) throws InterruptedException {
-		EventLoopGroup group = new NioEventLoopGroup(2);
+		EventLoopGroup group = new NioEventLoopGroup(1);
 		try {
 			Bootstrap b = new Bootstrap();
 			b.group(group).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true)
@@ -52,13 +52,21 @@ public class NettyIngestionClient {
 			// Start the client.
 			ChannelFuture f = b.connect("localhost", 9927).sync();
 			Channel channel = f.channel();
-			List<DataPoint> data = new ArrayList<>();
-			for (int i = 0; i < 42; i++) {
-				DataPoint dp = new DataPoint("test", System.currentTimeMillis() + i, System.currentTimeMillis() + i);
-				dp.setFp(false);
-				data.add(dp);
+			for (int k = 0; k < 100000; k++) {
+				List<DataPoint> data = new ArrayList<>();
+				for (int i = 0; i < 100; i++) {
+					DataPoint dp = new DataPoint("test" + i, System.currentTimeMillis() + i * k,
+							System.currentTimeMillis() + i * k);
+					dp.setFp(false);
+					data.add(dp);
+				}
+				channel.writeAndFlush(data);
+				if(k%10000==0) {
+					System.out.println("K="+k);
+				}
 			}
-			channel.writeAndFlush(data);
+			System.out.println("Data points:" + 100000);
+			channel.flush();
 			channel.closeFuture().await();
 			System.exit(0);
 		} finally {
