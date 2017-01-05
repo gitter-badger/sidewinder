@@ -52,13 +52,16 @@ public class SeriesDataPointDecoder extends ReplayingDecoder<Void> {
 		String seriesName = new String(b);
 		long timestamp = buf.readLong();
 		byte flag = buf.readByte();
+		DataPoint dp;
 		if (flag == '0') {
 			double value = buf.readDouble();
-			return new DataPoint(seriesName, timestamp, value);
+			dp = new DataPoint(seriesName, timestamp, value);
+			dp.setFp(true);
 		} else {
 			long value = buf.readLong();
-			return new DataPoint(seriesName, timestamp, value);
+			dp = new DataPoint(seriesName, timestamp, value);
 		}
+		return dp;
 	}
 
 }

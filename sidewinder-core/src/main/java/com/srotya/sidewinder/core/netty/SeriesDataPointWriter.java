@@ -28,7 +28,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
  * @author ambud
  */
 public class SeriesDataPointWriter extends ChannelInboundHandlerAdapter {
-	
+
 	private StorageEngine engine;
 
 	public SeriesDataPointWriter(StorageEngine engine) {
@@ -37,15 +37,22 @@ public class SeriesDataPointWriter extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if(msg==null) {
+		if (msg == null) {
 			return;
 		}
 		DataPoint dp = (DataPoint) msg;
-		if(dp.getSeriesName().isEmpty()) {
+		if (dp.getSeriesName().isEmpty()) {
 			return;
 		}
 		try {
-			engine.writeSeries(null, dp.getSeriesName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.getValue(), null);
+			if (dp.isFp()) {
+				engine.writeSeries(null, dp.getSeriesName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
+						dp.getValue(), null);
+			} else {
+				engine.writeSeries(null, dp.getSeriesName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
+						dp.getLongValue(), null);
+			}
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -61,5 +68,5 @@ public class SeriesDataPointWriter extends ChannelInboundHandlerAdapter {
 		cause.printStackTrace();
 		ctx.close();
 	}
-	
+
 }

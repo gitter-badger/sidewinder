@@ -23,7 +23,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.srotya.sidewinder.core.utils.TimeUtils;
 import com.srotya.sidewinder.gorillac.ByteBufferBitInput;
@@ -35,12 +37,16 @@ import com.srotya.sidewinder.gorillac.Writer;
  * @author ambud
  */
 public class GorillaStorageEngine implements StorageEngine {
-	
+
 	private SortedMap<String, TimeSeries> seriesMap;
-	
+	private AtomicInteger counter = new AtomicInteger(0);
+
 	@Override
 	public void configure(Map<String, String> conf) throws IOException {
 		seriesMap = new ConcurrentSkipListMap<>();
+		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+			System.out.println(counter.getAndSet(0));
+		}, 0, 1, TimeUnit.SECONDS);
 	}
 
 	@Override
@@ -48,18 +54,20 @@ public class GorillaStorageEngine implements StorageEngine {
 			long value, Callback callback) throws IOException {
 		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, seriesName, tags, unit, timestamp);
 		timeSeries.addDatapoint(timestamp, value);
+		counter.incrementAndGet();
 	}
-	
-	protected TimeSeries getOrCreateTimeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp) {
+
+	protected TimeSeries getOrCreateTimeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit,
+			long timestamp) {
 		int bucket = TimeUtils.getTimeBucket(unit, timestamp, 4096);
 		String tsBucket = Integer.toHexString(bucket);
-		StringBuilder builder = new StringBuilder(seriesName.length()+1+tsBucket.length());
+		StringBuilder builder = new StringBuilder(seriesName.length() + 1 + tsBucket.length());
 		builder.append(seriesName);
 		builder.append("_");
 		builder.append(tsBucket);
 		String rowKey = builder.toString();
 		TimeSeries timeSeries = seriesMap.get(rowKey);
-		if(timeSeries==null) {
+		if (timeSeries == null) {
 			timeSeries = new TimeSeries(timestamp);
 			seriesMap.put(rowKey, timeSeries);
 		}
@@ -71,6 +79,7 @@ public class GorillaStorageEngine implements StorageEngine {
 			double value, Callback callback) throws IOException {
 		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, seriesName, tags, unit, timestamp);
 		timeSeries.addDatapoint(timestamp, value);
+		counter.incrementAndGet();
 	}
 
 	@Override
@@ -125,7 +134,7 @@ public class GorillaStorageEngine implements StorageEngine {
 				compressor.addValue(timestamp, value);
 			}
 		}
-		
+
 		public void addDatapoint(long timestamp, long value) {
 			synchronized (output) {
 				compressor.addValue(timestamp, value);
@@ -143,7 +152,7 @@ public class GorillaStorageEngine implements StorageEngine {
 			return new Reader(new ByteBufferBitInput(buf), countSnapshot);
 		}
 	}
-	
+
 	@Override
 	public void connect() throws IOException {
 	}
