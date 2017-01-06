@@ -130,6 +130,12 @@ public class TestAbstractStorageEngine {
 			
 		}
 
+		@Override
+		public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
+			// TODO Auto-generated method stub
+			
+		}
+
 	}
 
 }

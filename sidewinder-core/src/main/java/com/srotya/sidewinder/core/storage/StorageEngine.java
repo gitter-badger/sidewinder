@@ -70,6 +70,8 @@ public interface StorageEngine {
 	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, double value,
 			Callback callback) throws IOException;
 
+	public void writeDataPoint(String dbName, DataPoint dp) throws IOException;
+	
 	public Set<String> getDatabases() throws Exception;
 
 	public Set<String> getSeries(String dbName) throws Exception;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.binary;
+package com.srotya.sidewinder.core.ingress.binary;
 
 import java.util.List;
 
@@ -55,11 +55,11 @@ public class SeriesDataPointDecoder extends ReplayingDecoder<Void> {
 		DataPoint dp;
 		if (flag == '0') {
 			double value = buf.readDouble();
-			dp = new DataPoint(seriesName, timestamp, value);
+			dp = new DataPoint(seriesName, null, timestamp, value);
 			dp.setFp(true);
 		} else {
 			long value = buf.readLong();
-			dp = new DataPoint(seriesName, timestamp, value);
+			dp = new DataPoint(seriesName, null, timestamp, value);
 		}
 		return dp;
 	}

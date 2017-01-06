@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.binary;
+package com.srotya.sidewinder.core.ingress.http;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.srotya.sidewinder.core.ingress.binary.NettyBinaryIngestionServer;
 import com.srotya.sidewinder.core.storage.GorillaStorageEngine;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
@@ -31,14 +32,15 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 /**
  * @author ambud
  */
-public class NettyBinaryIngestionServer {
+public class NettyHTTPIngestionServer {
 
 	private Channel channel;
 	private StorageEngine storageEngine;
@@ -59,9 +61,9 @@ public class NettyBinaryIngestionServer {
 					@Override
 					protected void initChannel(SocketChannel ch) throws Exception {
 						ChannelPipeline p = ch.pipeline();
-						p.addLast(new LengthFieldBasedFrameDecoder(3000, 0, 4, 0, 4));
-						p.addLast(new SeriesDataPointDecoder());
-						p.addLast(new SeriesDataPointWriter(storageEngine));
+						p.addLast(new HttpRequestDecoder());
+						p.addLast(new HttpResponseEncoder());
+						p.addLast(new HTTPDataPointDecoder(storageEngine));
 					}
 
 				}).bind("localhost", 9927).sync().channel();
@@ -78,4 +80,5 @@ public class NettyBinaryIngestionServer {
 		server.init(engine, new HashMap<>());
 		server.start();
 	}
+
 }

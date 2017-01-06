@@ -279,4 +279,10 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
 }

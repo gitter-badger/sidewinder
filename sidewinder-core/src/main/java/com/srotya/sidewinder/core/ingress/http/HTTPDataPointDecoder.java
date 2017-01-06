@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.http;
+package com.srotya.sidewinder.core.ingress.http;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -22,6 +22,12 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.StorageEngine;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -38,9 +44,19 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
+/**
+ * HTTP Protocol follows an InfluxDB wire format for ease of use with clients.
+ * 
+ * @author ambud
+ */
 public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 
 	private HttpRequest request;
+	private StorageEngine engine;
+
+	public HTTPDataPointDecoder(StorageEngine engine) {
+		this.engine = engine;
+	}
 
 	@Override
 	protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -56,7 +72,11 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 
 			ByteBuf byteBuf = httpContent.content();
 			if (byteBuf.isReadable()) {
-				String data = byteBuf.toString(CharsetUtil.UTF_8);
+				String payload = byteBuf.toString(CharsetUtil.UTF_8);
+				List<DataPoint> dps = dataPointsFromString(payload);
+				for (DataPoint dp : dps) {
+					engine.writeDataPoint(null, dp);
+				}
 			}
 
 			if (msg instanceof LastHttpContent) {
@@ -69,6 +89,45 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 			}
 		}
 
+	}
+
+	public static List<DataPoint> dataPointsFromString(String payload) {
+		List<DataPoint> dps = new ArrayList<>();
+		String[] splits = payload.split("\n");
+		for (String split : splits) {
+			String[] parts = split.split("\\s+");
+			if (parts.length < 2 || parts.length > 3) {
+				// invalid datapoint => drop
+				continue;
+			}
+			long timestamp = System.currentTimeMillis();
+			if (parts.length == 3) {
+				timestamp = Long.parseLong(parts[2]);
+			}
+			String[] key = parts[0].split(",");
+			String seriesName = key[0];
+			List<String> tags = new ArrayList<>();
+			for (int i = 1; i < key.length; i++) {
+				tags.add(key[i]);
+			}
+			String[] fields = parts[1].split(",");
+			for (String field : fields) {
+				String[] fv = field.split("=");
+				String prefix = fv[0];
+				if (fv[1].contains(".")) {
+					double value = Double.parseDouble(fv[1]);
+					DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
+					dp.setFp(true);
+					dps.add(dp);
+				} else {
+					long value = Long.parseLong(fv[1]);
+					DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
+					dp.setFp(false);
+					dps.add(dp);
+				}
+			}
+		}
+		return dps;
 	}
 
 	private boolean writeResponse(HttpObject httpObject, ChannelHandlerContext ctx) {

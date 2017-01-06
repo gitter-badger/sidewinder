@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 Ambud Sharma
+ * Copyright 2017 Ambud Sharma
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -38,15 +39,27 @@ import com.srotya.sidewinder.gorillac.Writer;
  */
 public class GorillaStorageEngine implements StorageEngine {
 
-	private SortedMap<String, TimeSeries> seriesMap;
+	private Map<String, SortedMap<String, TimeSeries>> measurementMap;
 	private AtomicInteger counter = new AtomicInteger(0);
 
 	@Override
 	public void configure(Map<String, String> conf) throws IOException {
-		seriesMap = new ConcurrentSkipListMap<>();
+		measurementMap = new ConcurrentHashMap<>();
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
 			System.out.println(counter.getAndSet(0));
 		}, 0, 1, TimeUnit.SECONDS);
+	}
+
+	@Override
+	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getSeriesName(), dp.getTags(), null,
+				dp.getTimestamp());
+		if (dp.isFp()) {
+			timeSeries.addDatapoint(dp.getTimestamp(), dp.getValue());
+		} else {
+			timeSeries.addDatapoint(dp.getTimestamp(), dp.getLongValue());
+		}
+		counter.incrementAndGet();
 	}
 
 	@Override
@@ -62,13 +75,15 @@ public class GorillaStorageEngine implements StorageEngine {
 		int bucket = TimeUtils.getTimeBucket(unit, timestamp, 4096);
 		String tsBucket = Integer.toHexString(bucket);
 		StringBuilder builder = new StringBuilder(seriesName.length() + 1 + tsBucket.length());
-		builder.append(seriesName);
 		builder.append("_");
 		builder.append(tsBucket);
 		String rowKey = builder.toString();
+		SortedMap<String, TimeSeries> seriesMap = measurementMap.get(seriesName);
+		if (seriesMap == null) {
+			seriesMap = new ConcurrentSkipListMap<>();
+		}
 		TimeSeries timeSeries = seriesMap.get(rowKey);
 		if (timeSeries == null) {
-			timeSeries = new TimeSeries(timestamp);
 			seriesMap.put(rowKey, timeSeries);
 		}
 		return timeSeries;

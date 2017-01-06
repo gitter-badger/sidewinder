@@ -16,6 +16,7 @@
 package com.srotya.sidewinder.core.storage;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * @author ambud
@@ -25,6 +26,7 @@ public class DataPoint implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private boolean isFp;
 	private String seriesName;
+	private List<String> tags;
 	private long timestamp;
 	private long value;
 
@@ -33,14 +35,16 @@ public class DataPoint implements Serializable {
 		this.value = value;
 	}
 
-	public DataPoint(String seriesName, long timestamp, long value) {
+	public DataPoint(String seriesName, List<String> tags, long timestamp, long value) {
 		this.seriesName = seriesName;
+		this.tags = tags;
 		this.timestamp = timestamp;
 		this.value = value;
 	}
 
-	public DataPoint(String seriesName, long timestamp, double value) {
+	public DataPoint(String seriesName, List<String> tags, long timestamp, double value) {
 		this.seriesName = seriesName;
+		this.tags = tags;
 		this.timestamp = timestamp;
 		this.value = Double.doubleToLongBits(value);
 	}
@@ -109,6 +113,20 @@ public class DataPoint implements Serializable {
 	 */
 	public void setFp(boolean isFp) {
 		this.isFp = isFp;
+	}
+
+	/**
+	 * @return the tags
+	 */
+	public List<String> getTags() {
+		return tags;
+	}
+
+	/**
+	 * @param tags the tags to set
+	 */
+	public void setTags(List<String> tags) {
+		this.tags = tags;
 	}
 
 	/* (non-Javadoc)
