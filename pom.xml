@@ -84,6 +84,7 @@
 		<tag>HEAD</tag>
 	</scm>
 	<modules>
-		<module>sidewinder-core</module>
+		<module>core</module>
+		<module>grafana</module>
 	</modules>
 </project>
