@@ -136,6 +136,12 @@ public class TestAbstractStorageEngine {
 			
 		}
 
+		@Override
+		public List<String> getSeriesLike(String seriesNames) throws IOException {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 	}
 
 }

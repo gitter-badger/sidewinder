@@ -15,22 +15,28 @@
  */
 package com.srotya.sidewinder.core;
 
-import com.srotya.sidewinder.core.storage.AbstractStorageEngine;
+import com.srotya.sidewinder.core.api.GrafanaQueryApi;
+import com.srotya.sidewinder.core.api.HealthCheck;
+import com.srotya.sidewinder.core.storage.GorillaStorageEngine;
+import com.srotya.sidewinder.core.storage.StorageEngine;
 
 import io.dropwizard.Application;
 import io.dropwizard.setup.Environment;
 
 /**
- * @author ambudsharma
+ * @author ambud
  *
  */
 public class SidewinderServer extends Application<SidewinderConfig>{
 	
-	private AbstractStorageEngine storageEngine;
+	private StorageEngine storageEngine;
 	private static SidewinderServer sidewinderServer;
 	
 	@Override
 	public void run(SidewinderConfig config, Environment env) throws Exception {
+		storageEngine = new GorillaStorageEngine();
+		env.jersey().register(new GrafanaQueryApi(storageEngine));
+		env.jersey().register(new HealthCheck());
 	}
 	
 	/**
@@ -53,7 +59,7 @@ public class SidewinderServer extends Application<SidewinderConfig>{
 	/**
 	 * @return
 	 */
-	public AbstractStorageEngine getStorageEngine() {
+	public StorageEngine getStorageEngine() {
 		return storageEngine;
 	}
 	

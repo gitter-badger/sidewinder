@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -284,5 +285,11 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public List<String> getSeriesLike(String seriesNames) throws IOException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

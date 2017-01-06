@@ -18,6 +18,7 @@ package com.srotya.sidewinder.core.storage;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,6 +55,11 @@ public class GorillaStorageEngine implements StorageEngine {
 		}, 0, 1, TimeUnit.SECONDS);
 	}
 
+	@Override
+	public List<String> getSeriesLike(String seriesNames) throws IOException {
+		return Arrays.asList("testseries");
+	}
+	
 	@Override
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
 		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getSeriesName(), dp.getTags(), TimeUnit.NANOSECONDS,

@@ -29,7 +29,7 @@ export class GenericDatasource {
 
   testDatasource() {
     return this.backendSrv.datasourceRequest({
-      url: this.url + '/',
+      url: this.url + '/hc',
       method: 'GET'
     }).then(response => {
       if (response.status === 200) {
@@ -64,11 +64,11 @@ export class GenericDatasource {
   metricFindQuery(options) {
     var target = typeof (options) === "string" ? options : options.target;
     var interpolated = {
-        target: this.templateSrv.replace(target, null, 'regex')
+      target: this.templateSrv.replace(target, null, 'regex')
     };
 
     return this.backendSrv.datasourceRequest({
-      url: this.url + '/search',
+      url: this.url + '/query/search',
       data: interpolated,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
@@ -85,7 +85,7 @@ export class GenericDatasource {
   }
 
   buildQueryParameters(options) {
-    //remove placeholder targets
+    // remove placeholder targets
     options.targets = _.filter(options.targets, target => {
       return target.target !== 'select metric';
     });

@@ -72,6 +72,8 @@ public interface StorageEngine {
 
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException;
 	
+	public List<String> getSeriesLike(String seriesNames) throws IOException;
+	
 	public Set<String> getDatabases() throws Exception;
 
 	public Set<String> getSeries(String dbName) throws Exception;
