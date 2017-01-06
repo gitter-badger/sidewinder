@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.netty;
+package com.srotya.sidewinder.core.http;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.srotya.sidewinder.core.binary.NettyBinaryIngestionServer;
+import com.srotya.sidewinder.core.binary.SeriesDataPointDecoder;
+import com.srotya.sidewinder.core.binary.SeriesDataPointWriter;
 import com.srotya.sidewinder.core.storage.GorillaStorageEngine;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
@@ -32,13 +35,15 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 /**
  * @author ambud
  */
-public class NettyIngestionServer {
+public class NettyHTTPIngestionServer {
 
 	private Channel channel;
 	private StorageEngine storageEngine;
@@ -49,7 +54,7 @@ public class NettyIngestionServer {
 
 	public void start() throws InterruptedException {
 		EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-		EventLoopGroup workerGroup = new NioEventLoopGroup(4);
+		EventLoopGroup workerGroup = new NioEventLoopGroup(1);
 
 		ServerBootstrap bs = new ServerBootstrap();
 		channel = bs.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
@@ -59,9 +64,8 @@ public class NettyIngestionServer {
 					@Override
 					protected void initChannel(SocketChannel ch) throws Exception {
 						ChannelPipeline p = ch.pipeline();
-						p.addLast(new LengthFieldBasedFrameDecoder(3000, 0, 4, 0, 4));
-						p.addLast(new SeriesDataPointDecoder());
-						p.addLast(new SeriesDataPointWriter(storageEngine));
+						p.addLast(new HttpRequestDecoder());
+						p.addLast(new HttpResponseEncoder());
 					}
 
 				}).bind("localhost", 9927).sync().channel();
@@ -74,8 +78,9 @@ public class NettyIngestionServer {
 	public static void main(String[] args) throws InterruptedException, IOException {
 		StorageEngine engine = new GorillaStorageEngine();
 		engine.configure(new HashMap<>());
-		NettyIngestionServer server = new NettyIngestionServer();
+		NettyBinaryIngestionServer server = new NettyBinaryIngestionServer();
 		server.init(engine, new HashMap<>());
 		server.start();
 	}
+	
 }

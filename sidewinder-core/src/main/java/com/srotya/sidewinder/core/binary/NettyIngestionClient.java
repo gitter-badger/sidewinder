@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.netty;
+package com.srotya.sidewinder.core.binary;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,9 +40,8 @@ public class NettyIngestionClient {
 		EventLoopGroup group = new NioEventLoopGroup(1);
 		try {
 			Bootstrap b = new Bootstrap();
-			b.group(group).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true)
-					.option(ChannelOption.SO_RCVBUF, 10485760).option(ChannelOption.SO_SNDBUF, 10485760)
-					.handler(new ChannelInitializer<SocketChannel>() {
+			b.group(group).channel(NioSocketChannel.class).option(ChannelOption.SO_RCVBUF, 10485760)
+					.option(ChannelOption.SO_SNDBUF, 10485760).handler(new ChannelInitializer<SocketChannel>() {
 						@Override
 						public void initChannel(SocketChannel ch) throws Exception {
 							ChannelPipeline p = ch.pipeline();
@@ -62,14 +61,12 @@ public class NettyIngestionClient {
 					dp.setFp(false);
 					data.add(dp);
 				}
+				// Thread.sleep(1);
 				channel.writeAndFlush(data);
-//				if(k%10000==0) {
-//					System.out.println("K="+k);
-//				}
 			}
 			System.out.println("Data points:" + TOTAL);
 			channel.flush();
-			channel.close().sync();
+			channel.closeFuture().sync();
 			System.exit(0);
 		} finally {
 			// Shut down the event loop to terminate all threads.
