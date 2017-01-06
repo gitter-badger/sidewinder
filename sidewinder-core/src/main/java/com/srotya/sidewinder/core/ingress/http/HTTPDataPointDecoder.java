@@ -23,6 +23,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,10 +48,14 @@ import io.netty.util.CharsetUtil;
 /**
  * HTTP Protocol follows an InfluxDB wire format for ease of use with clients.
  * 
+ * References:
+ * https://netty.io/4.0/xref/io/netty/example/http/snoop/HttpSnoopServerHandler.html
+ * 
  * @author ambud
  */
 public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 
+	private StringBuilder responseString = new StringBuilder();
 	private HttpRequest request;
 	private StorageEngine engine;
 
@@ -75,21 +80,31 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 				String payload = byteBuf.toString(CharsetUtil.UTF_8);
 				List<DataPoint> dps = dataPointsFromString(payload);
 				for (DataPoint dp : dps) {
-					System.out.println("Datapoint:"+dp);
-					engine.writeDataPoint(null, dp);
+					System.out.println("Datapoint:" + dp);
+					try {
+						engine.writeDataPoint(null, dp);
+					} catch (IOException e) {
+						responseString.append("Dropped:"+dp);
+					}
 				}
 			}
 
 			if (msg instanceof LastHttpContent) {
-				LastHttpContent lastHttpContent = (LastHttpContent) msg;
-				if (!lastHttpContent.trailingHeaders().isEmpty()) {
-				}
+//				LastHttpContent lastHttpContent = (LastHttpContent) msg;
+//				if (!lastHttpContent.trailingHeaders().isEmpty()) {
+//				}
 				if (writeResponse(request, ctx)) {
 					ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
 				}
 			}
 		}
 
+	}
+	
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+		cause.printStackTrace();
+		ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
 	}
 
 	public static List<DataPoint> dataPointsFromString(String payload) {
@@ -134,7 +149,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 	private boolean writeResponse(HttpObject httpObject, ChannelHandlerContext ctx) {
 
 		FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1,
-				httpObject.decoderResult().isSuccess() ? OK : BAD_REQUEST);
+				httpObject.decoderResult().isSuccess() ? OK : BAD_REQUEST, Unpooled.copiedBuffer(responseString.toString().toString(), CharsetUtil.UTF_8));
 		response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
 		response.headers().set(CONTENT_LENGTH, response.content().readableBytes());

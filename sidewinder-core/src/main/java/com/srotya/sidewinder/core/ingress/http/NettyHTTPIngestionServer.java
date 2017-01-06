@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.srotya.sidewinder.core.ingress.binary.NettyBinaryIngestionServer;
 import com.srotya.sidewinder.core.storage.GorillaStorageEngine;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 

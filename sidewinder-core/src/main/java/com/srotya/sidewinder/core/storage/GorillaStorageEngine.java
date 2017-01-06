@@ -27,7 +27,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
+import com.srotya.sidewinder.core.PerformantException;
 import com.srotya.sidewinder.core.utils.TimeUtils;
 import com.srotya.sidewinder.gorillac.ByteBufferBitInput;
 import com.srotya.sidewinder.gorillac.ByteBufferBitOutput;
@@ -39,6 +41,8 @@ import com.srotya.sidewinder.gorillac.Writer;
  */
 public class GorillaStorageEngine implements StorageEngine {
 
+	private static final Logger logger = Logger.getLogger(GorillaStorageEngine.class.getName());
+	private static PerformantException INVALID_DATAPOINT_EXCEPTION = new PerformantException();
 	private Map<String, SortedMap<String, TimeSeries>> measurementMap;
 	private AtomicInteger counter = new AtomicInteger(0);
 
@@ -53,7 +57,11 @@ public class GorillaStorageEngine implements StorageEngine {
 	@Override
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
 		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getSeriesName(), dp.getTags(), TimeUnit.NANOSECONDS,
-				dp.getTimestamp());
+				dp.getTimestamp(), dp.isFp());
+		if(dp.isFp()!=timeSeries.isFp()) {
+			// drop this datapoint, mixed series are not allowed
+			throw INVALID_DATAPOINT_EXCEPTION;
+		}
 		if (dp.isFp()) {
 			timeSeries.addDatapoint(dp.getTimestamp(), dp.getValue());
 		} else {
@@ -65,27 +73,28 @@ public class GorillaStorageEngine implements StorageEngine {
 	@Override
 	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp,
 			long value, Callback callback) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, seriesName, tags, unit, timestamp);
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, seriesName, tags, unit, timestamp, false);
 		timeSeries.addDatapoint(timestamp, value);
 		counter.incrementAndGet();
 	}
 
 	protected TimeSeries getOrCreateTimeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit,
-			long timestamp) {
+			long timestamp, boolean fp) {
 		int bucket = TimeUtils.getTimeBucket(unit, timestamp, 4096);
 		String tsBucket = Integer.toHexString(bucket);
 		StringBuilder builder = new StringBuilder(seriesName.length() + 1 + tsBucket.length());
-		builder.append("_");
 		builder.append(tsBucket);
 		String rowKey = builder.toString();
 		SortedMap<String, TimeSeries> seriesMap = measurementMap.get(seriesName);
 		if (seriesMap == null) {
 			seriesMap = new ConcurrentSkipListMap<>();
+			measurementMap.put(seriesName, seriesMap);
 		}
 		TimeSeries timeSeries = seriesMap.get(rowKey);
 		if (timeSeries == null) {
-			timeSeries = new TimeSeries(timestamp);
+			timeSeries = new TimeSeries(fp, timestamp);
 			seriesMap.put(rowKey, timeSeries);
+			logger.info("Creating new timeseries:"+timeSeries);
 		}
 		return timeSeries;
 	}
@@ -93,7 +102,7 @@ public class GorillaStorageEngine implements StorageEngine {
 	@Override
 	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp,
 			double value, Callback callback) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, seriesName, tags, unit, timestamp);
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, seriesName, tags, unit, timestamp, true);
 		timeSeries.addDatapoint(timestamp, value);
 		counter.incrementAndGet();
 	}
@@ -136,11 +145,13 @@ public class GorillaStorageEngine implements StorageEngine {
 	public static class TimeSeries implements Serializable {
 
 		private static final long serialVersionUID = 1L;
+		private boolean fp;
 		private Writer compressor;
 		private ByteBufferBitOutput output;
 		private int count;
 
-		public TimeSeries(long headerTimestamp) {
+		public TimeSeries(boolean fp, long headerTimestamp) {
+			this.fp = fp;
 			this.output = new ByteBufferBitOutput(4096 * 8);
 			this.compressor = new Writer(headerTimestamp, output);
 		}
@@ -166,6 +177,13 @@ public class GorillaStorageEngine implements StorageEngine {
 			}
 			buf.rewind();
 			return new Reader(new ByteBufferBitInput(buf), countSnapshot);
+		}
+
+		/**
+		 * @return the fp
+		 */
+		public boolean isFp() {
+			return fp;
 		}
 	}
 
