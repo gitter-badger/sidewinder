@@ -52,7 +52,7 @@ public class GorillaStorageEngine implements StorageEngine {
 
 	@Override
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getSeriesName(), dp.getTags(), null,
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getSeriesName(), dp.getTags(), TimeUnit.NANOSECONDS,
 				dp.getTimestamp());
 		if (dp.isFp()) {
 			timeSeries.addDatapoint(dp.getTimestamp(), dp.getValue());
@@ -84,6 +84,7 @@ public class GorillaStorageEngine implements StorageEngine {
 		}
 		TimeSeries timeSeries = seriesMap.get(rowKey);
 		if (timeSeries == null) {
+			timeSeries = new TimeSeries(timestamp);
 			seriesMap.put(rowKey, timeSeries);
 		}
 		return timeSeries;

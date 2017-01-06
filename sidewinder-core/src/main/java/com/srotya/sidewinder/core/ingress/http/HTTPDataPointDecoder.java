@@ -75,6 +75,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 				String payload = byteBuf.toString(CharsetUtil.UTF_8);
 				List<DataPoint> dps = dataPointsFromString(payload);
 				for (DataPoint dp : dps) {
+					System.out.println("Datapoint:"+dp);
 					engine.writeDataPoint(null, dp);
 				}
 			}

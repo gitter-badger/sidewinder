@@ -109,7 +109,8 @@ public class DataPoint implements Serializable {
 	}
 
 	/**
-	 * @param isFp the isFp to set
+	 * @param isFp
+	 *            the isFp to set
 	 */
 	public void setFp(boolean isFp) {
 		this.isFp = isFp;
@@ -123,18 +124,25 @@ public class DataPoint implements Serializable {
 	}
 
 	/**
-	 * @param tags the tags to set
+	 * @param tags
+	 *            the tags to set
 	 */
 	public void setTags(List<String> tags) {
 		this.tags = tags;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
 	public String toString() {
-		return "DataPoint [seriesName=" + seriesName + ", timestamp=" + timestamp + ", value=" + getValue() + "]";
+		if (isFp) {
+			return "DataPoint [seriesName=" + seriesName + ", timestamp=" + timestamp + ", value=" + getValue() + "]";
+		} else {
+			return "DataPoint [seriesName=" + seriesName + ", timestamp=" + timestamp + ", value=" + getLongValue() + "]";
+		}
 	}
 
 }

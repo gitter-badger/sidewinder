@@ -38,6 +38,8 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 /**
+ * 
+ * 
  * @author ambud
  */
 public class NettyHTTPIngestionServer {
@@ -66,7 +68,7 @@ public class NettyHTTPIngestionServer {
 						p.addLast(new HTTPDataPointDecoder(storageEngine));
 					}
 
-				}).bind("localhost", 9927).sync().channel();
+				}).bind("localhost", 9928).sync().channel();
 	}
 
 	public void stop() throws InterruptedException {
@@ -76,7 +78,7 @@ public class NettyHTTPIngestionServer {
 	public static void main(String[] args) throws InterruptedException, IOException {
 		StorageEngine engine = new GorillaStorageEngine();
 		engine.configure(new HashMap<>());
-		NettyBinaryIngestionServer server = new NettyBinaryIngestionServer();
+		NettyHTTPIngestionServer server = new NettyHTTPIngestionServer();
 		server.init(engine, new HashMap<>());
 		server.start();
 	}
