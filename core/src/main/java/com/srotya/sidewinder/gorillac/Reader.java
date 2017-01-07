@@ -23,7 +23,8 @@ import com.srotya.sidewinder.core.storage.DataPoint;
  *
  * @author Michael Burman
  * 
- *  Modified by @author Ambud to remove EOF markers and count based multi-threaded readers
+ *         Modified by @author Ambud to remove EOF markers and count based
+ *         multi-threaded readers
  */
 public class Reader {
 
@@ -64,6 +65,24 @@ public class Reader {
 		return new DataPoint(storedTimestamp, storedVal);
 	}
 
+	/**
+	 * Predicate pushdown for the time filter
+	 * @param startTs
+	 * @param endTs
+	 * @return Pair if there's next value, null if series is done.
+	 */
+	public DataPoint readPair(long startTs, long endTs) {
+		next();
+		if (endOfStream) {
+			return null;
+		}
+		if (storedTimestamp >= startTs && storedTimestamp < endTs) {
+			return new DataPoint(storedTimestamp, storedVal);
+		} else {
+			return null;
+		}
+	}
+	
 	private void next() {
 		if (counter < pairCount) {
 			if (storedTimestamp == 0) {

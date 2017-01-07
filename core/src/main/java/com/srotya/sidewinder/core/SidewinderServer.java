@@ -15,8 +15,16 @@
  */
 package com.srotya.sidewinder.core;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoField;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
 import com.srotya.sidewinder.core.api.GrafanaQueryApi;
-import com.srotya.sidewinder.core.api.HealthCheck;
 import com.srotya.sidewinder.core.storage.GorillaStorageEngine;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
@@ -27,20 +35,31 @@ import io.dropwizard.setup.Environment;
  * @author ambud
  *
  */
-public class SidewinderServer extends Application<SidewinderConfig>{
-	
+public class SidewinderServer extends Application<SidewinderConfig> {
+
 	private StorageEngine storageEngine;
 	private static SidewinderServer sidewinderServer;
-	
+
 	@Override
 	public void run(SidewinderConfig config, Environment env) throws Exception {
 		storageEngine = new GorillaStorageEngine();
+		storageEngine.configure(new HashMap<>());
 		env.jersey().register(new GrafanaQueryApi(storageEngine));
-		env.jersey().register(new HealthCheck());
+		Random rand = new Random();
+		LocalDateTime ldt = LocalDateTime.now();
+		ZoneId utc = ZoneId.of("UTC");
+		long ts = ldt.atZone(utc).toInstant().toEpochMilli();
+		for (int i = 0; i < 10; i++) {
+			System.out.println(
+					"Input time:" + (System.currentTimeMillis() - (ts - (i * 60000))) + "\t" + (ts - (i * 60000)));
+			storageEngine.writeSeries("test", "cpu", new ArrayList<>(), TimeUnit.MILLISECONDS, ts - (i * 60000),
+					rand.nextInt() * 100, null);
+		}
 	}
-	
+
 	/**
 	 * Main method to launch dropwizard app
+	 * 
 	 * @param args
 	 * @throws Exception
 	 */
@@ -55,12 +74,12 @@ public class SidewinderServer extends Application<SidewinderConfig>{
 	public static SidewinderServer getSidewinderServer() {
 		return sidewinderServer;
 	}
-	
+
 	/**
 	 * @return
 	 */
 	public StorageEngine getStorageEngine() {
 		return storageEngine;
 	}
-	
+
 }

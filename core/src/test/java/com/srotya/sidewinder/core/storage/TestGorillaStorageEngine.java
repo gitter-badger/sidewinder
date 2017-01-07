@@ -15,9 +15,12 @@
  */
 package com.srotya.sidewinder.core.storage;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -25,14 +28,12 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 /**
- * @author ambudsharma
- *
+ * @author ambud
  */
-public class TestRocksDBStorageEngine implements Callback {
+public class TestGorillaStorageEngine implements Callback {
 
 	@Test
 	public void testBaseTimeSeriesWrites() throws Exception {
-		// AbstractStorageEngine engine = new RocksDBStorageEngine();
 		GorillaStorageEngine engine = new GorillaStorageEngine();
 		engine.configure(new HashMap<>());
 		engine.connect();
@@ -41,7 +42,7 @@ public class TestRocksDBStorageEngine implements Callback {
 
 		ExecutorService es = Executors.newCachedThreadPool();
 
-		for (int k = 0; k < 50000; k++) {
+		for (int k = 0; k < 500; k++) {
 			final int p = k;
 			es.submit(() -> {
 				long ts = System.currentTimeMillis();
@@ -60,15 +61,17 @@ public class TestRocksDBStorageEngine implements Callback {
 		es.awaitTermination(10, TimeUnit.SECONDS);
 
 		System.out.println((System.currentTimeMillis() - ts1) + "\tms");
-		// try {
-		// System.out.println("Series");
-		// for (String string : engine.getSeries()) {
-		// System.out.println("Series:"+string);
-		// }
-		// } catch (Exception e) {
-		// // TODO Auto-generated catch block
-		// e.printStackTrace();
-		// }
+	}
+
+	@Test
+	public void testReads() throws IOException {
+		StorageEngine engine = new GorillaStorageEngine();
+		engine.configure(new HashMap<>());
+		long ts = System.currentTimeMillis();
+		engine.writeSeries("test", "cpu", null, TimeUnit.MILLISECONDS, ts, 1, null);
+		engine.writeSeries("test", "cpu", null, TimeUnit.MILLISECONDS, ts + (400 * 60000), 4, null);
+		List<DataPoint> queryDataPoints = engine.queryDataPoints("test", "cpu", ts, ts + (400 * 60000), null);
+		assertEquals(ts, queryDataPoints.get(0).getTimestamp());
 	}
 
 	@Override

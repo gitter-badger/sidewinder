@@ -51,7 +51,7 @@ public class DatabaseOpsApi {
 	@DELETE
 	public void dropDatabase(@PathParam(DB_NAME) String dbName) {
 		try {
-			storageEngine.truncateDatabase(dbName);
+			storageEngine.dropDatabase(dbName);
 		} catch (Exception e) {
 			throw new InternalServerErrorException(e);
 		}
@@ -61,7 +61,7 @@ public class DatabaseOpsApi {
 	@Produces({ MediaType.APPLICATION_JSON })
 	public Set<String> listSeries(@PathParam(DB_NAME) String dbName) {
 		try {
-			Set<String> series = storageEngine.getSeries(dbName);
+			Set<String> series = storageEngine.getAllMeasurementsForDb(dbName);
 			if (series.size() == 0) {
 				throw new NotFoundException("No such database:" + dbName);
 			} else {

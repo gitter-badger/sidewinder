@@ -214,7 +214,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	}
 
 	@Override
-	public Set<String> getSeries(String dbName) throws Exception {
+	public Set<String> getAllMeasurementsForDb(String dbName) throws Exception {
 		Set<String> series = new HashSet<>();
 		RocksIterator itr = indexdb.newIterator();
 		itr.seekToFirst();
@@ -276,7 +276,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	}
 
 	@Override
-	public void truncateDatabase(String dbName) throws Exception {
+	public void dropDatabase(String dbName) throws Exception {
 		// TODO Auto-generated method stub
 		
 	}
@@ -288,7 +288,14 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 	}
 
 	@Override
-	public List<String> getSeriesLike(String seriesNames) throws IOException {
+	public Set<String> getMeasurementsLike(String dbName, String seriesNames) throws IOException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
+			List<String> tags) {
 		// TODO Auto-generated method stub
 		return null;
 	}

@@ -107,7 +107,7 @@ public class TestAbstractStorageEngine {
 		}
 
 		@Override
-		public Set<String> getSeries(String dbName) throws Exception {
+		public Set<String> getAllMeasurementsForDb(String dbName) throws Exception {
 			// TODO Auto-generated method stub
 			return null;
 		}
@@ -125,7 +125,7 @@ public class TestAbstractStorageEngine {
 		}
 
 		@Override
-		public void truncateDatabase(String dbName) throws Exception {
+		public void dropDatabase(String dbName) throws Exception {
 			// TODO Auto-generated method stub
 			
 		}
@@ -137,7 +137,14 @@ public class TestAbstractStorageEngine {
 		}
 
 		@Override
-		public List<String> getSeriesLike(String seriesNames) throws IOException {
+		public Set<String> getMeasurementsLike(String dbName, String seriesNames) throws IOException {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
+				List<String> tags) {
 			// TODO Auto-generated method stub
 			return null;
 		}

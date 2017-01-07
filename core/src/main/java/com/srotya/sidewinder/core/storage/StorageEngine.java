@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.srotya.sidewinder.core.storage.GorillaStorageEngine.TimeSeries;
+
 /**
  * @author ambudsharma
  */
@@ -47,7 +49,7 @@ public interface StorageEngine {
 	public void disconnect() throws IOException;
 
 	/**
-	 * @param seriesName
+	 * @param measurementName
 	 * @param tags
 	 * @param unit
 	 * @param timestamp
@@ -55,11 +57,11 @@ public interface StorageEngine {
 	 * @return
 	 * @throws IOException
 	 */
-	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, long value,
+	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp, long value,
 			Callback callback) throws IOException;
 
 	/**
-	 * @param seriesName
+	 * @param measurementName
 	 * @param tags
 	 * @param unit
 	 * @param timestamp
@@ -67,21 +69,23 @@ public interface StorageEngine {
 	 * @param value
 	 * @throws IOException
 	 */
-	public void writeSeries(String dbName, String seriesName, List<String> tags, TimeUnit unit, long timestamp, double value,
+	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp, double value,
 			Callback callback) throws IOException;
 
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException;
 	
-	public List<String> getSeriesLike(String seriesNames) throws IOException;
+	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime, List<String> tags);
+	
+	public Set<String> getMeasurementsLike(String dbName, String partialMeasurementName) throws IOException;
 	
 	public Set<String> getDatabases() throws Exception;
 
-	public Set<String> getSeries(String dbName) throws Exception;
+	public Set<String> getAllMeasurementsForDb(String dbName) throws Exception;
 	
 	public void deleteAllData() throws Exception;
 	
 	public boolean checkIfExists(String dbName) throws Exception;
 	
-	public void truncateDatabase(String dbName) throws Exception;
+	public void dropDatabase(String dbName) throws Exception;
 	
 }
