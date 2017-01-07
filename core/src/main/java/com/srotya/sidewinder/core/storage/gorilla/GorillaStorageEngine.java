@@ -16,8 +16,6 @@
 package com.srotya.sidewinder.core.storage.gorilla;
 
 import java.io.IOException;
-import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +54,76 @@ public class GorillaStorageEngine implements StorageEngine {
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
 			// System.out.println(counter.getAndSet(0));
 		}, 0, 1, TimeUnit.SECONDS);
+	}
+
+	@Override
+	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
+			List<String> tags, Predicate valuePredicate) {
+		List<DataPoint> points = new ArrayList<>();
+		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
+		if (measurementMap != null) {
+			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
+			if (seriesMap != null) {
+				BetweenPredicate timeRangePredicate = null;// new
+															// BetweenPredicate(startTime,
+															// endTime);
+				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT);
+				String startTsBucket = Integer.toHexString(tsStartBucket);
+				int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
+				String endTsBucket = Integer.toHexString(tsEndBucket);
+				SortedMap<String, TimeSeries> series = seriesMap.subMap(startTsBucket,
+						endTsBucket + Character.MAX_VALUE);
+				if (series == null || series.isEmpty()) {
+					TimeSeries timeSeries = seriesMap.get(startTsBucket);
+					if (timeSeries != null) {
+						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
+					}
+				} else {
+					for (TimeSeries timeSeries : series.values()) {
+						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
+						System.out.println("Count of points:" + timeSeries.getCount() + "\t" + points.size());
+					}
+				}
+			} else {
+				System.out.println("Measurement not found:" + measurementName);
+			}
+		} else {
+			System.out.println("DB not found:" + dbName);
+		}
+		return points;
+	}
+
+	/**
+	 * Converts timeseries to a list of datapoints appended to the supplied list
+	 * object. Datapoints are filtered by the supplied predicates before they
+	 * are returned. These predicates are pushed down to the reader for
+	 * efficiency and performance as it prevents unnecessary object creation.
+	 * 
+	 * @param points
+	 *            list data points are appended to
+	 * @param timeSeries
+	 *            to extract the data points from
+	 * @param timePredicate
+	 *            time range filter
+	 * @param valuePredicate
+	 *            value filter
+	 * @return the points argument
+	 */
+	public static List<DataPoint> seriesToDataPoints(List<DataPoint> points, TimeSeries timeSeries, Predicate timePredicate,
+			Predicate valuePredicate) {
+		Reader reader = timeSeries.getReader(timePredicate, valuePredicate);
+		DataPoint point = null;
+		while (true) {
+			try {
+				point = reader.readPair();
+				if (point != null) {
+					points.add(point);
+				}
+			} catch (IOException e) {
+				break;
+			}
+		}
+		return points;
 	}
 
 	@Override
@@ -168,129 +236,12 @@ public class GorillaStorageEngine implements StorageEngine {
 		databaseMap.remove(dbName);
 	}
 
-	/**
-	 * In-memory representation of a time series.
-	 * 
-	 * @author ambud
-	 */
-	public static class TimeSeries implements Serializable {
-
-		private static final long serialVersionUID = 1L;
-		private boolean fp;
-		private Writer compressor;
-		private ByteBufferBitOutput output;
-		private int count;
-
-		public TimeSeries(boolean fp, long headerTimestamp) {
-			this.fp = fp;
-			this.output = new ByteBufferBitOutput(4096 * 8 * 2);
-			this.compressor = new Writer(headerTimestamp, output);
-		}
-
-		public void addDatapoint(long timestamp, double value) {
-			synchronized (output) {
-				compressor.addValue(timestamp, value);
-				count++;
-			}
-		}
-
-		public void addDatapoint(long timestamp, long value) {
-			synchronized (output) {
-				compressor.addValue(timestamp, value);
-				count++;
-			}
-		}
-
-		public Reader getReader(Predicate timePredicate, Predicate valuePredicate) {
-			ByteBuffer buf = null;
-			int countSnapshot;
-			synchronized (output) {
-				buf = output.getByteBuffer().duplicate();
-				countSnapshot = count;
-			}
-			buf.rewind();
-			return new Reader(new ByteBufferBitInput(buf), countSnapshot, timePredicate, valuePredicate);
-		}
-
-		/**
-		 * @return the fp
-		 */
-		public boolean isFp() {
-			return fp;
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.lang.Object#toString()
-		 */
-		@Override
-		public String toString() {
-			return "TimeSeries [fp=" + fp + ", compressor=" + compressor + ", output=" + output + ", count=" + count
-					+ "]";
-		}
-	}
-
 	@Override
 	public void connect() throws IOException {
 	}
 
 	@Override
 	public void disconnect() throws IOException {
-	}
-
-	@Override
-	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags, Predicate valuePredicate) {
-		List<DataPoint> points = new ArrayList<>();
-		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
-		if (measurementMap != null) {
-			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
-			if (seriesMap != null) {
-				BetweenPredicate timeRangePredicate = null;// new
-															// BetweenPredicate(startTime,
-															// endTime);
-				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT);
-				String startTsBucket = Integer.toHexString(tsStartBucket);
-				int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
-				String endTsBucket = Integer.toHexString(tsEndBucket);
-				SortedMap<String, TimeSeries> series = seriesMap.subMap(startTsBucket,
-						endTsBucket + Character.MAX_VALUE);
-				if (series == null || series.isEmpty()) {
-					TimeSeries timeSeries = seriesMap.get(startTsBucket);
-					if (timeSeries != null) {
-						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
-					}
-				} else {
-					for (TimeSeries timeSeries : series.values()) {
-						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
-						System.out.println("Count of points:" + timeSeries.count + "\t" + points.size());
-					}
-				}
-			} else {
-				System.out.println("Measurement not found:" + measurementName);
-			}
-		} else {
-			System.out.println("DB not found:" + dbName);
-		}
-		return points;
-	}
-
-	private void seriesToDataPoints(List<DataPoint> points, TimeSeries timeSeries, Predicate timePredicate,
-			Predicate valuePredicate) {
-		Reader reader = timeSeries.getReader(timePredicate, valuePredicate);
-		DataPoint point = null;
-		while (true) {
-			try {
-				point = reader.readPair();
-				if (point != null) {
-					point.setTimestamp(point.getTimestamp()-28800000);
-					points.add(point);
-				}
-			} catch (IOException e) {
-				break;
-			}
-		}
 	}
 
 }

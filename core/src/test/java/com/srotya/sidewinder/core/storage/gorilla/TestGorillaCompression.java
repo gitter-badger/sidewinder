@@ -63,7 +63,7 @@ public class TestGorillaCompression {
 				new DataPoint(now + 16500, Double.doubleToRawLongBits(-38.0)) };
 
 		Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getValue()));
-		c.close();
+		c.flush();
 
 		ByteBuffer byteBuffer = output.getByteBuffer();
 		byteBuffer.flip();
@@ -115,7 +115,7 @@ public class TestGorillaCompression {
 			c.addValue(bb.getLong(), bb.getDouble());
 		}
 
-		c.close();
+		c.flush();
 
 		bb.flip();
 
@@ -165,7 +165,7 @@ public class TestGorillaCompression {
 			c.addValue(bb.getLong(), bb.getDouble());
 		}
 
-		c.close();
+		c.flush();
 
 		bb.flip();
 
@@ -199,7 +199,7 @@ public class TestGorillaCompression {
 		ByteBufferBitOutput output = new ByteBufferBitOutput();
 
 		Writer c = new Writer(now, output);
-		c.close();
+		c.flush();
 
 		ByteBuffer byteBuffer = output.getByteBuffer();
 		byteBuffer.flip();
@@ -240,7 +240,7 @@ public class TestGorillaCompression {
 			c.addValue(bb.getLong(), bb.getLong());
 		}
 
-		c.close();
+		c.flush();
 
 		bb.flip();
 

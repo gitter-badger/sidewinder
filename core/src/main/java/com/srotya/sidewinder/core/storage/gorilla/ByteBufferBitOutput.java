@@ -46,13 +46,13 @@ public class ByteBufferBitOutput implements BitOutput {
 	 *            New initialsize to use
 	 */
 	public ByteBufferBitOutput(int initialSize) {
-//		bb = ByteBuffer.allocate(initialSize);
+		// bb = ByteBuffer.allocate(initialSize);
 		bb = ByteBuffer.allocateDirect(initialSize);
 		b = bb.get(bb.position());
 	}
 
 	private void expandAllocation() {
-//		ByteBuffer largerBB = ByteBuffer.allocate(bb.capacity() * 2);
+		// ByteBuffer largerBB = ByteBuffer.allocate(bb.capacity() * 2);
 		ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity() * 2);
 		bb.flip();
 		largerBB.put(bb);

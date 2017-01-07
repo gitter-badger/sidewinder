@@ -21,7 +21,7 @@ package com.srotya.sidewinder.core.storage.gorilla;
  *
  * @author Michael Burman
  * 
- * Modified by @author Ambud to remove EOF markers
+ *         Modified by @author Ambud to remove EOF markers
  */
 public class Writer {
 
@@ -100,7 +100,7 @@ public class Writer {
 	/**
 	 * Closes the block and writes the remaining stuff to the BitOutput.
 	 */
-	public void close() {
+	public void flush() {
 		// These are selected to test interoperability and correctness of the
 		// solution, this can be read with go-tsz
 		// out.writeBits(0x0F, 4);

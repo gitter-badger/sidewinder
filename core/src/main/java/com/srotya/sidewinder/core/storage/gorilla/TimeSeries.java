@@ -1,0 +1,117 @@
+/**
+ * Copyright 2017 Ambud Sharma
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * 		http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.srotya.sidewinder.core.storage.gorilla;
+
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+
+import com.srotya.sidewinder.core.predicates.Predicate;
+
+/**
+ * In-memory representation of a time series based on Gorilla compression. This
+ * class wraps the compressed time series byte representation of Gorilla and
+ * adds read-write concurrency and thread-safety using re-entrant locks.
+ * 
+ * @author ambud
+ */
+public class TimeSeries implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	private boolean fp;
+	private Writer writer;
+	private ByteBufferBitOutput output;
+	private int count;
+
+	public TimeSeries(boolean fp, long headerTimestamp) {
+		this.fp = fp;
+		this.output = new ByteBufferBitOutput(4096 * 8 * 2);
+		this.writer = new Writer(headerTimestamp, output);
+	}
+
+	public void addDatapoint(long timestamp, double value) {
+		synchronized (output) {
+			writer.addValue(timestamp, value);
+			count++;
+		}
+	}
+
+	public void addDatapoint(long timestamp, long value) {
+		synchronized (output) {
+			writer.addValue(timestamp, value);
+			count++;
+		}
+	}
+
+	public Reader getReader(Predicate timePredicate, Predicate valuePredicate) {
+		ByteBuffer buf = null;
+		int countSnapshot;
+		synchronized (output) {
+			buf = output.getByteBuffer().duplicate();
+			countSnapshot = count;
+		}
+		buf.rewind();
+		return new Reader(new ByteBufferBitInput(buf), countSnapshot, timePredicate, valuePredicate);
+	}
+
+	/**
+	 * Flush byte to buffer
+	 */
+	public void flush() {
+		synchronized (output) {
+			writer.flush();
+		}
+	}
+
+	/**
+	 * @return the fp
+	 */
+	public boolean isFp() {
+		return fp;
+	}
+
+	/**
+	 * Not threadsafe
+	 * 
+	 * @return the count
+	 */
+	public int getCount() {
+		return count;
+	}
+
+	/**
+	 * Analytical method used for monitoring compression ratios for a given
+	 * timeseries. Ratio = expected number of bytes / actual number of bytes.
+	 * 
+	 * @return compression ratio
+	 */
+	public double getCompressionRatio() {
+		synchronized (output) {
+			ByteBuffer buf = output.getByteBuffer().duplicate();
+			double expectedSize = count * 8 * 2;
+			return expectedSize / buf.position();
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "TimeSeries [fp=" + fp + ", compressor=" + writer + ", output=" + output + ", count=" + count + "]";
+	}
+}
