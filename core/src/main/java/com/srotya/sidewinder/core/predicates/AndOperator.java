@@ -13,23 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql.operators;
+package com.srotya.sidewinder.core.predicates;
 
-public abstract class SimpleOperator implements Operator {
+import java.util.List;
 
-	private Object literal;
-	private String column;
+public class AndOperator extends ComplexOperator {
 
-	public SimpleOperator(String column, Object literal) {
-		this.column = column;
-		this.literal = literal;
+	public AndOperator(List<Condition> operators) {
+		super(operators);
 	}
-	
-	public String getColumn() {
-		return column;
+
+	@Override
+	public boolean shortCircuit(boolean prev, boolean current) {
+		return !(prev && current);
 	}
-	
-	public Object getLiteral() {
-		return literal;
+
+	@Override
+	public boolean operator(boolean prev, Condition next, Object value) {
+		return prev && next.operate(value);
 	}
+
+	@Override
+	public String toString() {
+		return "AndOperator " + getOperators() + "";
+	}
+
 }

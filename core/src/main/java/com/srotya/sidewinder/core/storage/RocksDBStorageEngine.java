@@ -42,6 +42,7 @@ import com.esotericsoftware.kryo.io.Output;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
 import com.srotya.sidewinder.core.utils.ByteUtils;
 
 import io.symcpe.wraith.MurmurHash;
@@ -295,7 +296,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 
 	@Override
 	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags) {
+			List<String> tags, Predicate valuePredicate) {
 		// TODO Auto-generated method stub
 		return null;
 	}

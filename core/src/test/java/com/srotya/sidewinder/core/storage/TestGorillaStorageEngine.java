@@ -70,8 +70,9 @@ public class TestGorillaStorageEngine implements Callback {
 		long ts = System.currentTimeMillis();
 		engine.writeSeries("test", "cpu", null, TimeUnit.MILLISECONDS, ts, 1, null);
 		engine.writeSeries("test", "cpu", null, TimeUnit.MILLISECONDS, ts + (400 * 60000), 4, null);
-		List<DataPoint> queryDataPoints = engine.queryDataPoints("test", "cpu", ts, ts + (400 * 60000), null);
+		List<DataPoint> queryDataPoints = engine.queryDataPoints("test", "cpu", ts, ts + (400 * 60000), null, null);
 		assertEquals(ts, queryDataPoints.get(0).getTimestamp());
+		assertEquals(ts + (400 * 60000), queryDataPoints.get(1).getTimestamp());
 	}
 
 	@Override

@@ -8,15 +8,15 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import com.srotya.sidewinder.core.sql.operators.AndOperator;
-import com.srotya.sidewinder.core.sql.operators.ComplexOperator;
-import com.srotya.sidewinder.core.sql.operators.Equals;
-import com.srotya.sidewinder.core.sql.operators.GreaterThan;
-import com.srotya.sidewinder.core.sql.operators.GreaterThanEquals;
-import com.srotya.sidewinder.core.sql.operators.LessThan;
-import com.srotya.sidewinder.core.sql.operators.LessThanEquals;
-import com.srotya.sidewinder.core.sql.operators.Operator;
-import com.srotya.sidewinder.core.sql.operators.OrOperator;
+import com.srotya.sidewinder.core.predicates.AndOperator;
+import com.srotya.sidewinder.core.predicates.ComplexOperator;
+import com.srotya.sidewinder.core.predicates.Equals;
+import com.srotya.sidewinder.core.predicates.GreaterThan;
+import com.srotya.sidewinder.core.predicates.GreaterThanEquals;
+import com.srotya.sidewinder.core.predicates.LessThan;
+import com.srotya.sidewinder.core.predicates.LessThanEquals;
+import com.srotya.sidewinder.core.predicates.OrOperator;
+import com.srotya.sidewinder.core.predicates.Condition;
 
 /**
  * This class provides an empty implementation of {@link SQLParserListener},
@@ -25,10 +25,10 @@ import com.srotya.sidewinder.core.sql.operators.OrOperator;
  */
 public class SQLParserBaseListener implements SQLParserListener {
 
-	private Stack<Operator> stacks;
-	private Operator filterTree;
+	private Stack<Condition> stacks;
+	private Condition filterTree;
 	
-	public Operator getFilterTree() {
+	public Condition getFilterTree() {
 		return filterTree;
 	}
 
@@ -3795,7 +3795,7 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 */
 	@Override
 	public void exitComparison_predicate(SQLParser.Comparison_predicateContext ctx) {
-		Operator op = null;
+		Condition op = null;
 		String lhs = ctx.left.getText();
 		String rhs = ctx.right.getText();
 		if (ctx.comp_op().EQUAL() != null) {

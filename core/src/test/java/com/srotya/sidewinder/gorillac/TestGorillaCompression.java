@@ -15,8 +15,7 @@
  */
 package com.srotya.sidewinder.gorillac;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
@@ -28,6 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
 
+import com.srotya.sidewinder.core.PerformantException;
 import com.srotya.sidewinder.core.storage.DataPoint;
 
 /**
@@ -37,7 +37,7 @@ import com.srotya.sidewinder.core.storage.DataPoint;
  *
  * @author Michael Burman
  * 
- * Modified by @author Ambud to switch to JUnit4
+ *         Modified by @author Ambud to switch to JUnit4
  */
 public class TestGorillaCompression {
 
@@ -65,7 +65,7 @@ public class TestGorillaCompression {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Reader d = new Reader(input, pairs.length);
+		Reader d = new Reader(input, pairs.length, null, null);
 
 		// Replace with stream once decompressor supports it
 		for (int i = 0; i < pairs.length; i++) {
@@ -74,7 +74,11 @@ public class TestGorillaCompression {
 			assertEquals("Value did not match", pairs[i].getValue(), pair.getValue(), 0);
 		}
 
-		assertNull(d.readPair());
+		try {
+			assertNull(d.readPair());
+			fail("End of stream, shouldn't be able to read any more");
+		} catch (PerformantException e) {
+		}
 	}
 
 	/**
@@ -115,7 +119,7 @@ public class TestGorillaCompression {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Reader d = new Reader(input, 5);
+		Reader d = new Reader(input, 5, null, null);
 
 		// Replace with stream once decompressor supports it
 		for (int i = 0; i < 5; i++) {
@@ -123,7 +127,11 @@ public class TestGorillaCompression {
 			assertEquals("Timestamp did not match", bb.getLong(), pair.getTimestamp());
 			assertEquals("Value did not match", bb.getDouble(), pair.getValue(), 0);
 		}
-		assertNull(d.readPair());
+		try {
+			assertNull(d.readPair());
+			fail("End of stream, shouldn't be able to read any more");
+		} catch (PerformantException e) {
+		}
 	}
 
 	/**
@@ -161,7 +169,7 @@ public class TestGorillaCompression {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Reader d = new Reader(input, amountOfPoints);
+		Reader d = new Reader(input, amountOfPoints, null, null);
 
 		for (int i = 0; i < amountOfPoints; i++) {
 			long tStamp = bb.getLong();
@@ -170,7 +178,11 @@ public class TestGorillaCompression {
 			assertEquals("Expected timestamp did not match at point " + i, tStamp, pair.getTimestamp());
 			assertEquals(val, pair.getValue(), 0);
 		}
-		assertNull(d.readPair());
+		try {
+			assertNull(d.readPair());
+			fail("End of stream, shouldn't be able to read any more");
+		} catch (PerformantException e) {
+		}
 	}
 
 	/**
@@ -189,9 +201,13 @@ public class TestGorillaCompression {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Reader d = new Reader(input, 0);
+		Reader d = new Reader(input, 0, null, null);
 
-		assertNull(d.readPair());
+		try {
+			assertNull(d.readPair());
+			fail("End of stream, shouldn't be able to read any more");
+		} catch (PerformantException e) {
+		}
 	}
 
 	/**
@@ -228,7 +244,7 @@ public class TestGorillaCompression {
 		byteBuffer.flip();
 
 		ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-		Reader d = new Reader(input, amountOfPoints);
+		Reader d = new Reader(input, amountOfPoints, null, null);
 
 		for (int i = 0; i < amountOfPoints; i++) {
 			long tStamp = bb.getLong();
@@ -237,6 +253,10 @@ public class TestGorillaCompression {
 			assertEquals("Expected timestamp did not match at point " + i, tStamp, pair.getTimestamp());
 			assertEquals(val, pair.getLongValue());
 		}
-		assertNull(d.readPair());
+		try {
+			assertNull(d.readPair());
+			fail("End of stream, shouldn't be able to read any more");
+		} catch (PerformantException e) {
+		}
 	}
 }

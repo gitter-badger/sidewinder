@@ -19,14 +19,10 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import java.util.TimeZone;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -75,23 +71,15 @@ public class GrafanaQueryApi {
 	@Produces({ MediaType.APPLICATION_JSON })
 	@Consumes({ MediaType.APPLICATION_JSON })
 	public List<Target> query(@PathParam(DatabaseOpsApi.DB_NAME) String dbName, String query) throws ParseException {
-		// SimpleDateFormat sdf = new SimpleDateFormat();
-		// sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		JsonObject json = gson.fromJson(query, JsonObject.class);
-		// System.out.println(gson.toJson(json));
+		System.err.println(gson.toJson(json));
 		JsonObject range = json.get("range").getAsJsonObject();
-		LocalDateTime startTsT = LocalDateTime.parse(range.get("from").getAsString(),
-				DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
-		ZoneId utc = ZoneId.of("UTC");
-		long startTs = startTsT.atZone(utc).toInstant().toEpochMilli();
-		// 1483664565096
-		// 1483722162452
-		LocalDateTime endTsT = LocalDateTime.parse(range.get("to").getAsString(),
-				DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
-		long endTs = endTsT.atZone(utc).toInstant().toEpochMilli();
+		long startTs = sdf.parse(range.get("from").getAsString()).getTime();
+		long endTs = sdf.parse(range.get("to").getAsString()).getTime();
 
-		System.out.println("From:" + startTs + "\t" + new Date(endTs) + "\t" + range.get("to").getAsString());
+		System.out.println("From:" + new Date(startTs) + "\tTo:" + new Date(endTs) + "\tRaw To:" + range.get("to").getAsString());
 		List<String> measurementNames = new ArrayList<>();
 		JsonArray targets = json.get("targets").getAsJsonArray();
 		for (int i = 0; i < targets.size(); i++) {
@@ -100,19 +88,11 @@ public class GrafanaQueryApi {
 				measurementNames.add(jsonElement.getAsString());
 			}
 		}
-		/*
-		 * { "panelId": 1, "range": { "from": "2017-01-06T01:39:12.670Z", "to":
-		 * "2017-01-06T07:39:12.670Z", "raw": { "from": "now-6h", "to": "now" }
-		 * }, "rangeRaw": { "from": "now-6h", "to": "now" }, "interval": "20s",
-		 * "intervalMs": 20000, "targets": [ { "target": "testseries", "refId":
-		 * "A", "type": "timeserie" } ], "format": "json", "maxDataPoints": 1039
-		 * }
-		 */
+
 		List<Target> output = new ArrayList<>();
 		for (String measurementName : measurementNames) {
+			List<DataPoint> points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, null, null);
 			Target tar = new Target(measurementName);
-			// System.err.println(dbName + "\t" + measurementName);
-			List<DataPoint> points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, null);
 			for (DataPoint dataPoint : points) {
 				if (!dataPoint.isFp()) {
 					tar.getDatapoints().add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
@@ -121,7 +101,6 @@ public class GrafanaQueryApi {
 				}
 			}
 			output.add(tar);
-			System.err.println("Output:" + output + "\t" + points);
 		}
 		return output;
 	}

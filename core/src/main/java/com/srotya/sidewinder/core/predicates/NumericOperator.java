@@ -13,28 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql.operators;
+package com.srotya.sidewinder.core.predicates;
 
-import java.util.List;
+public abstract class NumericOperator extends SimpleOperator {
 
-public class OrOperator extends ComplexOperator {
+	private boolean isFloat;
 
-	public OrOperator(List<Operator> operators) {
-		super(operators);
+	public NumericOperator(String column, boolean isFloat, Number literal) {
+		super(column, literal);
+		this.isFloat = isFloat;
 	}
 
 	@Override
-	public boolean shortCircuit(boolean prev, boolean current) {
-		return prev || current;
+	public boolean operate(Object value) {
+		return compareTrue((Number) getLiteral(), (Number) value);
 	}
 
-	@Override
-	public boolean operator(boolean prev, Operator next, Object value) {
-		return prev || next.operate(value);
+	public abstract boolean compareTrue(Number literal, Number value);
+
+	public boolean isFloat() {
+		return isFloat;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
 	@Override
 	public String toString() {
-		return "OrOperator " + getOperators() + "";
+		return "NumericOperator [column=" + getColumn() + "\tliteral=" + getLiteral() + "]";
 	}
+
 }

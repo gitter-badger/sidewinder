@@ -15,11 +15,8 @@
  */
 package com.srotya.sidewinder.core;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoField;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -46,14 +43,14 @@ public class SidewinderServer extends Application<SidewinderConfig> {
 		storageEngine.configure(new HashMap<>());
 		env.jersey().register(new GrafanaQueryApi(storageEngine));
 		Random rand = new Random();
-		LocalDateTime ldt = LocalDateTime.now();
-		ZoneId utc = ZoneId.of("UTC");
-		long ts = ldt.atZone(utc).toInstant().toEpochMilli();
-		for (int i = 0; i < 10; i++) {
-			System.out.println(
-					"Input time:" + (System.currentTimeMillis() - (ts - (i * 60000))) + "\t" + (ts - (i * 60000)));
-			storageEngine.writeSeries("test", "cpu", new ArrayList<>(), TimeUnit.MILLISECONDS, ts - (i * 60000),
-					rand.nextInt() * 100, null);
+		// ZoneId utc = ZoneId.of("America/Los_Angeles");
+		// Clock system = Clock.system(utc);
+		long ts = 28800000 + System.currentTimeMillis() - (100 * 60000);
+		for (int i = 0; i < 60; i++) {
+			long v = ts + (i * 60000);
+			System.out.println("Input time:" + new Date(v));
+			storageEngine.writeSeries("test", "cpu", new ArrayList<>(), TimeUnit.MILLISECONDS, v, rand.nextInt() * 100,
+					null);
 		}
 	}
 

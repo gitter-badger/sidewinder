@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql.operators;
+package com.srotya.sidewinder.core.predicates;
 
-public class GreaterThan extends NumericOperator {
+public class LessThan extends NumericOperator {
 
-	public GreaterThan(String column, boolean isFloat, Number literal) {
+	public LessThan(String column, boolean isFloat, Number literal) {
 		super(column, isFloat, literal);
 	}
 
 	@Override
 	public boolean compareTrue(Number literal, Number value) {
 		if (isFloat()) {
-			return value.doubleValue() > literal.doubleValue();
+			return value.doubleValue() < literal.doubleValue();
 		} else {
-			return value.longValue() > literal.longValue();
+			return value.longValue() < literal.longValue();
 		}
 	}
 

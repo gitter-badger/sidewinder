@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import com.srotya.sidewinder.core.PerformantException;
+import com.srotya.sidewinder.core.predicates.nonfp.BetweenPredicate;
+import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
 import com.srotya.sidewinder.core.utils.TimeUtils;
 import com.srotya.sidewinder.gorillac.ByteBufferBitInput;
 import com.srotya.sidewinder.gorillac.ByteBufferBitOutput;
@@ -182,7 +184,7 @@ public class GorillaStorageEngine implements StorageEngine {
 
 		public TimeSeries(boolean fp, long headerTimestamp) {
 			this.fp = fp;
-			this.output = new ByteBufferBitOutput(4096 * 8);
+			this.output = new ByteBufferBitOutput(4096 * 8 * 2);
 			this.compressor = new Writer(headerTimestamp, output);
 		}
 
@@ -200,7 +202,7 @@ public class GorillaStorageEngine implements StorageEngine {
 			}
 		}
 
-		public Reader getReader() {
+		public Reader getReader(Predicate timePredicate, Predicate valuePredicate) {
 			ByteBuffer buf = null;
 			int countSnapshot;
 			synchronized (output) {
@@ -208,7 +210,7 @@ public class GorillaStorageEngine implements StorageEngine {
 				countSnapshot = count;
 			}
 			buf.rewind();
-			return new Reader(new ByteBufferBitInput(buf), countSnapshot);
+			return new Reader(new ByteBufferBitInput(buf), countSnapshot, timePredicate, valuePredicate);
 		}
 
 		/**
@@ -240,32 +242,30 @@ public class GorillaStorageEngine implements StorageEngine {
 
 	@Override
 	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags) {
+			List<String> tags, Predicate valuePredicate) {
 		List<DataPoint> points = new ArrayList<>();
 		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
 		if (measurementMap != null) {
 			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
 			if (seriesMap != null) {
-				if (startTime <= -1) {
-					for (TimeSeries timeSeries : seriesMap.values()) {
-						seriesToDataPoints(points, timeSeries, Long.MIN_VALUE, Long.MAX_VALUE);
+				BetweenPredicate timeRangePredicate = null;// new
+															// BetweenPredicate(startTime,
+															// endTime);
+				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT);
+				String startTsBucket = Integer.toHexString(tsStartBucket);
+				int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
+				String endTsBucket = Integer.toHexString(tsEndBucket);
+				SortedMap<String, TimeSeries> series = seriesMap.subMap(startTsBucket,
+						endTsBucket + Character.MAX_VALUE);
+				if (series == null || series.isEmpty()) {
+					TimeSeries timeSeries = seriesMap.get(startTsBucket);
+					if (timeSeries != null) {
+						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
 					}
 				} else {
-					int startBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT);
-					String startTsBucket = Integer.toHexString(startBucket);
-					int endBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
-					String endTsBucket = Integer.toHexString(endBucket);
-					SortedMap<String, TimeSeries> series = seriesMap.subMap(startTsBucket,
-							endTsBucket + Character.MAX_VALUE);
-					if (series == null || series.isEmpty()) {
-						TimeSeries timeSeries = seriesMap.get(startTsBucket);
-						if (timeSeries != null) {
-							seriesToDataPoints(points, timeSeries, startTime, endTime);
-						}
-					} else {
-						for (TimeSeries timeSeries : series.values()) {
-							seriesToDataPoints(points, timeSeries, startTime, endTime);
-						}
+					for (TimeSeries timeSeries : series.values()) {
+						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
+						System.out.println("Count of points:" + timeSeries.count + "\t" + points.size());
 					}
 				}
 			} else {
@@ -277,11 +277,20 @@ public class GorillaStorageEngine implements StorageEngine {
 		return points;
 	}
 
-	private void seriesToDataPoints(List<DataPoint> points, TimeSeries timeSeries, long startTime, long endTime) {
-		Reader reader = timeSeries.getReader();
+	private void seriesToDataPoints(List<DataPoint> points, TimeSeries timeSeries, Predicate timePredicate,
+			Predicate valuePredicate) {
+		Reader reader = timeSeries.getReader(timePredicate, valuePredicate);
 		DataPoint point = null;
-		while ((point = reader.readPair(startTime, endTime)) != null) {
-			points.add(point);
+		while (true) {
+			try {
+				point = reader.readPair();
+				if (point != null) {
+					point.setTimestamp(point.getTimestamp()-28800000);
+					points.add(point);
+				}
+			} catch (IOException e) {
+				break;
+			}
 		}
 	}
 

@@ -22,8 +22,8 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import com.srotya.sidewinder.core.sql.operators.ComplexOperator;
-import com.srotya.sidewinder.core.sql.operators.Operator;
+import com.srotya.sidewinder.core.predicates.ComplexOperator;
+import com.srotya.sidewinder.core.predicates.Condition;
 import com.srotya.sidewinder.core.sql.parser.SQLParser.SqlContext;
 
 
@@ -39,17 +39,17 @@ public class SqlDriver {
 		SQLParserBaseListener listener = new SQLParserBaseListener();
 		walker.walk(listener, select_stmt);
 		
-		Operator tree = listener.getFilterTree();
+		Condition tree = listener.getFilterTree();
 		prune(tree);
 	}
 
 	
-	public static void prune(Operator tree) {
+	public static void prune(Condition tree) {
 		if(tree instanceof ComplexOperator) {
-			List<Operator> operators = ((ComplexOperator) tree).getOperators();
-			Iterator<Operator> iterator = operators.iterator();
+			List<Condition> operators = ((ComplexOperator) tree).getOperators();
+			Iterator<Condition> iterator = operators.iterator();
 			while(iterator.hasNext()) {
-				Operator op = iterator.next();
+				Condition op = iterator.next();
 				if(op.getClass().equals(tree.getClass())) {
 					((ComplexOperator) tree).addOperator(op);
 				}

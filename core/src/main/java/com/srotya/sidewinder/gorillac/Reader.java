@@ -15,6 +15,10 @@
  */
 package com.srotya.sidewinder.gorillac;
 
+import java.io.IOException;
+
+import com.srotya.sidewinder.core.PerformantException;
+import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
 
 /**
@@ -28,23 +32,25 @@ import com.srotya.sidewinder.core.storage.DataPoint;
  */
 public class Reader {
 
+	private static final PerformantException EOS_EXCEPTION = new PerformantException("End of stream reached");
 	private int storedLeadingZeros = Integer.MAX_VALUE;
 	private int storedTrailingZeros = 0;
 	private long storedVal = 0;
 	private long storedTimestamp = 0;
 	private long storedDelta = 0;
-
 	private long blockTimestamp = 0;
-
 	private boolean endOfStream = false;
-
 	private BitInput in;
 	private int pairCount;
 	private int counter;
+	private Predicate timePredicate;
+	private Predicate valuePredicate;
 
-	public Reader(BitInput input, int pairCount) {
+	public Reader(BitInput input, int pairCount, Predicate timePredicate, Predicate valuePredicate) {
 		in = input;
 		this.pairCount = pairCount;
+		this.timePredicate = timePredicate;
+		this.valuePredicate = valuePredicate;
 		readHeader();
 	}
 
@@ -57,32 +63,20 @@ public class Reader {
 	 *
 	 * @return Pair if there's next value, null if series is done.
 	 */
-	public DataPoint readPair() {
+	public DataPoint readPair() throws IOException {
 		next();
 		if (endOfStream) {
+			throw EOS_EXCEPTION;
+		}
+		if (timePredicate != null && !timePredicate.apply(storedTimestamp)) {
+			return null;
+		}
+		if (valuePredicate != null && !valuePredicate.apply(storedVal)) {
 			return null;
 		}
 		return new DataPoint(storedTimestamp, storedVal);
 	}
 
-	/**
-	 * Predicate pushdown for the time filter
-	 * @param startTs
-	 * @param endTs
-	 * @return Pair if there's next value, null if series is done.
-	 */
-	public DataPoint readPair(long startTs, long endTs) {
-		next();
-		if (endOfStream) {
-			return null;
-		}
-		if (storedTimestamp >= startTs && storedTimestamp < endTs) {
-			return new DataPoint(storedTimestamp, storedVal);
-		} else {
-			return null;
-		}
-	}
-	
 	private void next() {
 		if (counter < pairCount) {
 			if (storedTimestamp == 0) {

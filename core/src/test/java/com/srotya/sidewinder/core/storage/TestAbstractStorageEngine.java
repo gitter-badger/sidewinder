@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
+import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
 import com.srotya.sidewinder.core.utils.ByteUtils;
 
 /**
@@ -144,7 +145,7 @@ public class TestAbstractStorageEngine {
 
 		@Override
 		public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-				List<String> tags) {
+				List<String> tags, Predicate valuePredicate) {
 			// TODO Auto-generated method stub
 			return null;
 		}

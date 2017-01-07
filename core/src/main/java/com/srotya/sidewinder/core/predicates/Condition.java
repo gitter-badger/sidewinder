@@ -13,19 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql.operators;
+package com.srotya.sidewinder.core.predicates;
 
-public class NotOperator implements Operator{
+public interface Condition {
 	
-	private Operator inputOperator;
-
-	public NotOperator(Operator inputOperator) {
-		this.inputOperator = inputOperator;
-	}
-
-	@Override
-	public boolean operate(Object value) {
-		return !inputOperator.operate(value);
-	}
+	boolean operate(Object value);
 
 }
