@@ -22,8 +22,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import com.srotya.sidewinder.core.api.GrafanaQueryApi;
-import com.srotya.sidewinder.core.storage.GorillaStorageEngine;
 import com.srotya.sidewinder.core.storage.StorageEngine;
+import com.srotya.sidewinder.core.storage.gorilla.GorillaStorageEngine;
 
 import io.dropwizard.Application;
 import io.dropwizard.setup.Environment;

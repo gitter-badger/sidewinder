@@ -13,28 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.predicates;
+package com.srotya.sidewinder.core.sql;
 
-import java.util.List;
+public interface Condition {
+	
+	boolean operate(Object value);
 
-public class OrOperator extends ComplexOperator {
-
-	public OrOperator(List<Condition> operators) {
-		super(operators);
-	}
-
-	@Override
-	public boolean shortCircuit(boolean prev, boolean current) {
-		return prev || current;
-	}
-
-	@Override
-	public boolean operator(boolean prev, Condition next, Object value) {
-		return prev || next.operate(value);
-	}
-
-	@Override
-	public String toString() {
-		return "OrOperator " + getOperators() + "";
-	}
 }

@@ -22,8 +22,8 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import com.srotya.sidewinder.core.predicates.ComplexOperator;
-import com.srotya.sidewinder.core.predicates.Condition;
+import com.srotya.sidewinder.core.sql.ComplexOperator;
+import com.srotya.sidewinder.core.sql.Condition;
 import com.srotya.sidewinder.core.sql.parser.SQLParser.SqlContext;
 
 

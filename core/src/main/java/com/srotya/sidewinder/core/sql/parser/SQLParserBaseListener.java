@@ -8,15 +8,15 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import com.srotya.sidewinder.core.predicates.AndOperator;
-import com.srotya.sidewinder.core.predicates.ComplexOperator;
-import com.srotya.sidewinder.core.predicates.Equals;
-import com.srotya.sidewinder.core.predicates.GreaterThan;
-import com.srotya.sidewinder.core.predicates.GreaterThanEquals;
-import com.srotya.sidewinder.core.predicates.LessThan;
-import com.srotya.sidewinder.core.predicates.LessThanEquals;
-import com.srotya.sidewinder.core.predicates.OrOperator;
-import com.srotya.sidewinder.core.predicates.Condition;
+import com.srotya.sidewinder.core.sql.AndOperator;
+import com.srotya.sidewinder.core.sql.ComplexOperator;
+import com.srotya.sidewinder.core.sql.Condition;
+import com.srotya.sidewinder.core.sql.Equals;
+import com.srotya.sidewinder.core.sql.GreaterThan;
+import com.srotya.sidewinder.core.sql.GreaterThanEquals;
+import com.srotya.sidewinder.core.sql.LessThan;
+import com.srotya.sidewinder.core.sql.LessThanEquals;
+import com.srotya.sidewinder.core.sql.OrOperator;
 
 /**
  * This class provides an empty implementation of {@link SQLParserListener},

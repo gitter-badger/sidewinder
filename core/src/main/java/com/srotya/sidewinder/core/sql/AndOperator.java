@@ -13,21 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.predicates;
+package com.srotya.sidewinder.core.sql;
 
-public class NumericEquals extends NumericOperator {
+import java.util.List;
 
-	public NumericEquals(String column, boolean isFloat, Number literal) {
-		super(column, isFloat, literal);
+public class AndOperator extends ComplexOperator {
+
+	public AndOperator(List<Condition> operators) {
+		super(operators);
 	}
 
 	@Override
-	public boolean compareTrue(Number literal, Number value) {
-		if (isFloat()) {
-			return value.doubleValue() == literal.doubleValue();
-		} else {
-			return value.longValue() == literal.longValue();
-		}
+	public boolean shortCircuit(boolean prev, boolean current) {
+		return !(prev && current);
+	}
+
+	@Override
+	public boolean operator(boolean prev, Condition next, Object value) {
+		return prev && next.operate(value);
+	}
+
+	@Override
+	public String toString() {
+		return "AndOperator " + getOperators() + "";
 	}
 
 }

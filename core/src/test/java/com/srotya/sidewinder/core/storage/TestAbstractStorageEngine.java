@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
-import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
+import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.utils.ByteUtils;
 
 /**

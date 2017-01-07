@@ -13,36 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.gorillac;
+package com.srotya.sidewinder.core.storage.gorilla;
 
 /**
- * This interface is used to write a compressed timeseries.
+ * This interface is used for reading a compressed time series.
  *
  * @author Michael Burman
  */
-public interface BitOutput {
+public interface BitInput {
 
 	/**
-	 * Stores a single bit, set if true, false otherwise.
-	 * 
-	 * @param bit
-	 *            false == 0, true == 1
-	 */
-	void writeBit(boolean bit);
-
-	/**
-	 * Write the given long value using the defined amount of least significant
-	 * bits.
+	 * Reads the next bit and returns true if bit is set and false if not.
 	 *
-	 * @param value
-	 *            The long value to be written
-	 * @param bits
-	 *            How many bits are stored to the stream
+	 * @return true == 1, false == 0
 	 */
-	void writeBits(long value, int bits);
+	boolean readBit();
 
 	/**
-	 * Flushes the current byte to the underlying stream
+	 * Returns a long that was stored in the next X bits in the stream.
+	 *
+	 * @param bits
+	 *            Amount of least significant bits to read from the stream.
+	 * @return reads the next long in the series using bits meaningful bits
 	 */
-	void flush();
+	long getLong(int bits);
 }

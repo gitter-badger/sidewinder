@@ -13,17 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.predicates;
+package com.srotya.sidewinder.core.sql;
 
-public class Equals extends SimpleOperator {
+public class LessThanEquals extends NumericOperator {
 
-	public Equals(String column, Object literal) {
-		super(column, literal);
+	public LessThanEquals(String column, boolean isFloat, Number literal) {
+		super(column, isFloat, literal);
 	}
 
 	@Override
-	public boolean operate(Object value) {
-		return getLiteral().equals(value);
+	public boolean compareTrue(Number literal, Number value) {
+		if (isFloat()) {
+			return value.doubleValue() <= literal.doubleValue();
+		} else {
+			return value.longValue() <= literal.longValue();
+		}
 	}
 
 }

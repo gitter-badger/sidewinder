@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.storage;
+package com.srotya.sidewinder.core.storage.rocksdb;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -42,7 +42,10 @@ import com.esotericsoftware.kryo.io.Output;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
+import com.srotya.sidewinder.core.predicates.Predicate;
+import com.srotya.sidewinder.core.storage.AbstractStorageEngine;
+import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.WriteTask;
 import com.srotya.sidewinder.core.utils.ByteUtils;
 
 import io.symcpe.wraith.MurmurHash;

@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.gorillac;
+package com.srotya.sidewinder.core.storage.gorilla;
 
 import java.io.IOException;
 
 import com.srotya.sidewinder.core.PerformantException;
-import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
+import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
 
 /**

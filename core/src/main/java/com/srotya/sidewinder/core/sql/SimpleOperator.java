@@ -13,10 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.predicates;
+package com.srotya.sidewinder.core.sql;
 
-public interface Condition {
+public abstract class SimpleOperator implements Condition {
+
+	private Object literal;
+	private String column;
+
+	public SimpleOperator(String column, Object literal) {
+		this.column = column;
+		this.literal = literal;
+	}
 	
-	boolean operate(Object value);
-
+	public String getColumn() {
+		return column;
+	}
+	
+	public Object getLiteral() {
+		return literal;
+	}
 }

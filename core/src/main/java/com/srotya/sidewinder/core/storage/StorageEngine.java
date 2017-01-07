@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
+import com.srotya.sidewinder.core.predicates.Predicate;
 
 /**
  * @author ambudsharma

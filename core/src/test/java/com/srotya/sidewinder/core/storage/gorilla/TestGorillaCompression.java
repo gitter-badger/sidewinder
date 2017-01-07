@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.gorillac;
+package com.srotya.sidewinder.core.storage.gorilla;
 
 import static org.junit.Assert.*;
 
@@ -29,6 +29,10 @@ import org.junit.Test;
 
 import com.srotya.sidewinder.core.PerformantException;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.gorilla.ByteBufferBitInput;
+import com.srotya.sidewinder.core.storage.gorilla.ByteBufferBitOutput;
+import com.srotya.sidewinder.core.storage.gorilla.Reader;
+import com.srotya.sidewinder.core.storage.gorilla.Writer;
 
 /**
  * These are generic tests to test that input matches the output after

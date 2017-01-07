@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.storage;
+package com.srotya.sidewinder.core.storage.gorilla;
 
 import static org.junit.Assert.*;
 
@@ -26,6 +26,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
+
+import com.srotya.sidewinder.core.storage.Callback;
+import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.StorageEngine;
+import com.srotya.sidewinder.core.storage.gorilla.GorillaStorageEngine;
 
 /**
  * @author ambud

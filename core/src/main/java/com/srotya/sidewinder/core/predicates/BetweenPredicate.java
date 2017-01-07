@@ -1,4 +1,4 @@
-package com.srotya.sidewinder.core.predicates.nonfp;
+package com.srotya.sidewinder.core.predicates;
 
 import java.util.Date;
 

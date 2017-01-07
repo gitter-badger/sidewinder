@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.gorillac;
+package com.srotya.sidewinder.core.storage.gorilla;
 
 /**
  * Implements the time series compression as described in the Facebook's Gorilla

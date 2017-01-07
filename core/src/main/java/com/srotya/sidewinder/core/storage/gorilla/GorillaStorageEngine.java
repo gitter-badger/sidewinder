@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.storage;
+package com.srotya.sidewinder.core.storage.gorilla;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -32,13 +32,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import com.srotya.sidewinder.core.PerformantException;
-import com.srotya.sidewinder.core.predicates.nonfp.BetweenPredicate;
-import com.srotya.sidewinder.core.predicates.nonfp.Predicate;
+import com.srotya.sidewinder.core.predicates.BetweenPredicate;
+import com.srotya.sidewinder.core.predicates.Predicate;
+import com.srotya.sidewinder.core.storage.Callback;
+import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.StorageEngine;
 import com.srotya.sidewinder.core.utils.TimeUtils;
-import com.srotya.sidewinder.gorillac.ByteBufferBitInput;
-import com.srotya.sidewinder.gorillac.ByteBufferBitOutput;
-import com.srotya.sidewinder.gorillac.Reader;
-import com.srotya.sidewinder.gorillac.Writer;
 
 /**
  * @author ambud
