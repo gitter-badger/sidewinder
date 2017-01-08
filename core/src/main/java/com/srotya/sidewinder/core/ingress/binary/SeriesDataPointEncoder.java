@@ -38,7 +38,7 @@ public class SeriesDataPointEncoder extends MessageToByteEncoder<List<DataPoint>
 	}
 
 	public static void encodeDPointToBuf(ByteBuf buf, DataPoint dataPoint) {
-		byte[] bytes = dataPoint.getSeriesName().getBytes();
+		byte[] bytes = dataPoint.getMeasurementName().getBytes();
 		buf.writeInt(bytes.length);
 		buf.writeBytes(bytes);
 		buf.writeLong(dataPoint.getTimestamp());

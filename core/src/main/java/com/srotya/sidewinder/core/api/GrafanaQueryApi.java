@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -50,9 +51,11 @@ import com.srotya.sidewinder.core.storage.StorageEngine;
 public class GrafanaQueryApi {
 
 	private StorageEngine engine;
+	private TimeZone tz;
 
 	public GrafanaQueryApi(StorageEngine engine) {
 		this.engine = engine;
+		tz = TimeZone.getDefault();
 	}
 
 	@Path("/hc")
@@ -78,8 +81,11 @@ public class GrafanaQueryApi {
 		JsonObject range = json.get("range").getAsJsonObject();
 		long startTs = sdf.parse(range.get("from").getAsString()).getTime();
 		long endTs = sdf.parse(range.get("to").getAsString()).getTime();
+		
+		startTs = tz.getOffset(startTs)+startTs;
+		endTs = tz.getOffset(endTs)+endTs;
 
-		System.out.println("From:" + new Date(startTs) + "\tTo:" + new Date(endTs) + "\tRaw To:" + range.get("to").getAsString());
+		System.out.println("From:" + new Date(startTs) + "\tTo:" + new Date(endTs) + "\tRaw To:" + range);
 		List<String> measurementNames = new ArrayList<>();
 		JsonArray targets = json.get("targets").getAsJsonArray();
 		for (int i = 0; i < targets.size(); i++) {

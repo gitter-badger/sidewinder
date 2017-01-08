@@ -17,7 +17,7 @@ package com.srotya.sidewinder.core.storage.gorilla;
 
 import java.io.IOException;
 
-import com.srotya.sidewinder.core.PerformantException;
+import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
 
@@ -32,7 +32,7 @@ import com.srotya.sidewinder.core.storage.DataPoint;
  */
 public class Reader {
 
-	private static final PerformantException EOS_EXCEPTION = new PerformantException("End of stream reached");
+	private static final RejectException EOS_EXCEPTION = new RejectException("End of stream reached");
 	private int storedLeadingZeros = Integer.MAX_VALUE;
 	private int storedTrailingZeros = 0;
 	private long storedVal = 0;

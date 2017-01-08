@@ -20,23 +20,23 @@ import java.io.IOException;
 /**
  * @author ambud
  */
-public class PerformantException extends IOException {
+public class RejectException extends IOException {
 
 	private static final long serialVersionUID = 1L;
 	
-	public PerformantException() {
+	public RejectException() {
 		super();
 	}
 
-	public PerformantException(String message, Throwable cause) {
+	public RejectException(String message, Throwable cause) {
 		super(message, cause);
 	}
 
-	public PerformantException(String message) {
+	public RejectException(String message) {
 		super(message);
 	}
 
-	public PerformantException(Throwable cause) {
+	public RejectException(Throwable cause) {
 		super(cause);
 	}
 

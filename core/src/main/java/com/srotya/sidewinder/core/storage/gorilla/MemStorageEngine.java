@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
-import com.srotya.sidewinder.core.PerformantException;
+import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.Callback;
@@ -40,11 +40,11 @@ import com.srotya.sidewinder.core.utils.TimeUtils;
 /**
  * @author ambud
  */
-public class GorillaStorageEngine implements StorageEngine {
+public class MemStorageEngine implements StorageEngine {
 
 	private static final int TIME_BUCKET_CONSTANT = 4096;
-	private static final Logger logger = Logger.getLogger(GorillaStorageEngine.class.getName());
-	private static PerformantException INVALID_DATAPOINT_EXCEPTION = new PerformantException();
+	private static final Logger logger = Logger.getLogger(MemStorageEngine.class.getName());
+	private static RejectException INVALID_DATAPOINT_EXCEPTION = new RejectException();
 	private Map<String, SortedMap<String, SortedMap<String, TimeSeries>>> databaseMap;
 	private AtomicInteger counter = new AtomicInteger(0);
 
@@ -64,10 +64,9 @@ public class GorillaStorageEngine implements StorageEngine {
 		if (measurementMap != null) {
 			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
 			if (seriesMap != null) {
-				BetweenPredicate timeRangePredicate = null;// new
-															// BetweenPredicate(startTime,
-															// endTime);
-				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT);
+				BetweenPredicate timeRangePredicate = new BetweenPredicate(startTime, endTime);
+				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT)
+						- TIME_BUCKET_CONSTANT;
 				String startTsBucket = Integer.toHexString(tsStartBucket);
 				int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
 				String endTsBucket = Integer.toHexString(tsEndBucket);
@@ -77,11 +76,14 @@ public class GorillaStorageEngine implements StorageEngine {
 					TimeSeries timeSeries = seriesMap.get(startTsBucket);
 					if (timeSeries != null) {
 						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
+						// System.out.println("Count of points:" +
+						// timeSeries.getCount() + "\t" + points.size());
 					}
 				} else {
 					for (TimeSeries timeSeries : series.values()) {
 						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
-						System.out.println("Count of points:" + timeSeries.getCount() + "\t" + points.size());
+						// System.out.println("Count of points:" +
+						// timeSeries.getCount() + "\t" + points.size());
 					}
 				}
 			} else {
@@ -109,14 +111,15 @@ public class GorillaStorageEngine implements StorageEngine {
 	 *            value filter
 	 * @return the points argument
 	 */
-	public static List<DataPoint> seriesToDataPoints(List<DataPoint> points, TimeSeries timeSeries, Predicate timePredicate,
-			Predicate valuePredicate) {
+	public static List<DataPoint> seriesToDataPoints(List<DataPoint> points, TimeSeries timeSeries,
+			Predicate timePredicate, Predicate valuePredicate) {
 		Reader reader = timeSeries.getReader(timePredicate, valuePredicate);
 		DataPoint point = null;
 		while (true) {
 			try {
 				point = reader.readPair();
 				if (point != null) {
+					point.setFp(timeSeries.isFp());
 					points.add(point);
 				}
 			} catch (IOException e) {
@@ -145,8 +148,8 @@ public class GorillaStorageEngine implements StorageEngine {
 
 	@Override
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getSeriesName(), dp.getTags(), TimeUnit.NANOSECONDS,
-				dp.getTimestamp(), dp.isFp());
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getMeasurementName(), dp.getTags(),
+				TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.isFp());
 		if (dp.isFp() != timeSeries.isFp()) {
 			// drop this datapoint, mixed series are not allowed
 			throw INVALID_DATAPOINT_EXCEPTION;
@@ -197,7 +200,7 @@ public class GorillaStorageEngine implements StorageEngine {
 		if (timeSeries == null) {
 			timeSeries = new TimeSeries(fp, timestamp);
 			seriesMap.put(rowKey, timeSeries);
-			logger.fine("Created new timeseries:" + timeSeries);
+			logger.fine("Created new timeseries:" + timeSeries + " for measurement:" + measurementName + "\t" + rowKey);
 		}
 		return timeSeries;
 	}

@@ -25,7 +25,10 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.StorageEngine;
@@ -43,6 +46,7 @@ import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -58,6 +62,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 	private StringBuilder responseString = new StringBuilder();
 	private HttpRequest request;
 	private StorageEngine engine;
+	private String dbName;
 
 	public HTTPDataPointDecoder(StorageEngine engine) {
 		this.engine = engine;
@@ -70,6 +75,18 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 			if (HttpUtil.is100ContinueExpected(request)) {
 				send100Continue(ctx);
 			}
+
+			QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+			Map<String, List<String>> params = queryStringDecoder.parameters();
+			if (!params.isEmpty()) {
+				for (Entry<String, List<String>> p : params.entrySet()) {
+					String key = p.getKey();
+					if (key.equalsIgnoreCase("db")) {
+						dbName = p.getValue().get(0);
+					}
+				}
+			}
+
 		}
 
 		if (msg instanceof HttpContent) {
@@ -77,22 +94,26 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 
 			ByteBuf byteBuf = httpContent.content();
 			if (byteBuf.isReadable()) {
-				String payload = byteBuf.toString(CharsetUtil.UTF_8);
-				List<DataPoint> dps = dataPointsFromString(payload);
-				for (DataPoint dp : dps) {
-					System.out.println("Datapoint:" + dp);
-					try {
-						engine.writeDataPoint(null, dp);
-					} catch (IOException e) {
-						responseString.append("Dropped:"+dp);
+				if (dbName == null) {
+					responseString.append("Invalid database null");
+				} else {
+					String payload = byteBuf.toString(CharsetUtil.UTF_8);
+					List<DataPoint> dps = dataPointsFromString(payload);
+					for (DataPoint dp : dps) {
+						System.out.println("Datapoint:" + dp + "\t" + new Date(dp.getTimestamp()));
+						try {
+							engine.writeDataPoint(dbName, dp);
+						} catch (IOException e) {
+							responseString.append("Dropped:" + dp);
+						}
 					}
 				}
 			}
 
 			if (msg instanceof LastHttpContent) {
-//				LastHttpContent lastHttpContent = (LastHttpContent) msg;
-//				if (!lastHttpContent.trailingHeaders().isEmpty()) {
-//				}
+				// LastHttpContent lastHttpContent = (LastHttpContent) msg;
+				// if (!lastHttpContent.trailingHeaders().isEmpty()) {
+				// }
 				if (writeResponse(request, ctx)) {
 					ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
 				}
@@ -100,10 +121,9 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 		}
 
 	}
-	
+
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		cause.printStackTrace();
 		ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
 	}
 
@@ -118,7 +138,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 			}
 			long timestamp = System.currentTimeMillis();
 			if (parts.length == 3) {
-				timestamp = Long.parseLong(parts[2]);
+				timestamp = Long.parseLong(parts[2]) / 1000;
 			}
 			String[] key = parts[0].split(",");
 			String seriesName = key[0];
@@ -149,7 +169,8 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 	private boolean writeResponse(HttpObject httpObject, ChannelHandlerContext ctx) {
 
 		FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1,
-				httpObject.decoderResult().isSuccess() ? OK : BAD_REQUEST, Unpooled.copiedBuffer(responseString.toString().toString(), CharsetUtil.UTF_8));
+				httpObject.decoderResult().isSuccess() ? OK : BAD_REQUEST,
+				Unpooled.copiedBuffer(responseString.toString().toString(), CharsetUtil.UTF_8));
 		response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
 		response.headers().set(CONTENT_LENGTH, response.content().readableBytes());

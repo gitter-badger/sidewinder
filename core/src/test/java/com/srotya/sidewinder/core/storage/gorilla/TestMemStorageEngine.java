@@ -31,23 +31,24 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
+import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
 /**
- * Unit tests for {@link GorillaStorageEngine}
+ * Unit tests for {@link MemStorageEngine}
  * 
  * @author ambud
  */
-public class TestGorillaStorageEngine {
+public class TestMemStorageEngine {
 
 	private Map<String, String> conf = new HashMap<>();
 
 	@Test
 	public void testConfigure() {
-		StorageEngine engine = new GorillaStorageEngine();
+		StorageEngine engine = new MemStorageEngine();
 		try {
 			engine.writeDataPoint("test", new DataPoint("ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
 			fail("Engine not initialized, shouldn't be able to write a datapoint");
@@ -68,7 +69,7 @@ public class TestGorillaStorageEngine {
 
 	@Test
 	public void testQueryDataPoints() throws IOException {
-		StorageEngine engine = new GorillaStorageEngine();
+		StorageEngine engine = new MemStorageEngine();
 		engine.configure(conf);
 		long ts = System.currentTimeMillis();
 		engine.writeSeries("test", "cpu", null, TimeUnit.MILLISECONDS, ts, 1, null);
@@ -81,7 +82,7 @@ public class TestGorillaStorageEngine {
 
 	@Test
 	public void testGetMeasurementsLike() throws IOException {
-		StorageEngine engine = new GorillaStorageEngine();
+		StorageEngine engine = new MemStorageEngine();
 		engine.configure(conf);
 		engine.writeSeries("test", "cpu", Arrays.asList("test"), TimeUnit.MILLISECONDS, System.currentTimeMillis(), 2L,
 				null);
@@ -100,23 +101,23 @@ public class TestGorillaStorageEngine {
 	}
 
 	@Test
-	public void testSeriesToDataPointConversion() {
+	public void testSeriesToDataPointConversion() throws RejectException {
 		List<DataPoint> points = new ArrayList<>();
 		long headerTimestamp = System.currentTimeMillis();
 		TimeSeries timeSeries = new TimeSeries(false, headerTimestamp);
 		timeSeries.addDatapoint(headerTimestamp, 1L);
-		GorillaStorageEngine.seriesToDataPoints(points, timeSeries, null, null);
+		MemStorageEngine.seriesToDataPoints(points, timeSeries, null, null);
 		assertEquals(1, points.size());
 		points.clear();
 
 		Predicate timepredicate = new BetweenPredicate(Long.MAX_VALUE, Long.MAX_VALUE);
-		GorillaStorageEngine.seriesToDataPoints(points, timeSeries, timepredicate, null);
+		MemStorageEngine.seriesToDataPoints(points, timeSeries, timepredicate, null);
 		assertEquals(0, points.size());
 	}
 
 	@Test
 	public void testBaseTimeSeriesWrites() throws Exception {
-		GorillaStorageEngine engine = new GorillaStorageEngine();
+		MemStorageEngine engine = new MemStorageEngine();
 		engine.configure(new HashMap<>());
 		engine.connect();
 

@@ -18,6 +18,7 @@ package com.srotya.sidewinder.core.storage.gorilla;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
+import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.Predicate;
 
 /**
@@ -30,10 +31,12 @@ import com.srotya.sidewinder.core.predicates.Predicate;
 public class TimeSeries implements Serializable {
 
 	private static final long serialVersionUID = 1L;
+	private static final RejectException OLD_DATA_POINT = new RejectException("Rejected older datapoint");
 	private boolean fp;
 	private Writer writer;
 	private ByteBufferBitOutput output;
 	private int count;
+	private long lastTs;
 
 	public TimeSeries(boolean fp, long headerTimestamp) {
 		this.fp = fp;
@@ -41,17 +44,27 @@ public class TimeSeries implements Serializable {
 		this.writer = new Writer(headerTimestamp, output);
 	}
 
-	public void addDatapoint(long timestamp, double value) {
+	public void addDatapoint(long timestamp, double value) throws RejectException {
 		synchronized (output) {
+			if (timestamp < lastTs) {
+				// drop this datapoint
+				throw OLD_DATA_POINT;
+			}
 			writer.addValue(timestamp, value);
 			count++;
+			lastTs = timestamp;
 		}
 	}
 
-	public void addDatapoint(long timestamp, long value) {
+	public void addDatapoint(long timestamp, long value) throws RejectException {
 		synchronized (output) {
+			if (timestamp < lastTs) {
+				// drop this datapoint
+				throw OLD_DATA_POINT;
+			}
 			writer.addValue(timestamp, value);
 			count++;
+			lastTs = timestamp;
 		}
 	}
 
@@ -112,6 +125,6 @@ public class TimeSeries implements Serializable {
 	 */
 	@Override
 	public String toString() {
-		return "TimeSeries [fp=" + fp + ", compressor=" + writer + ", output=" + output + ", count=" + count + "]";
+		return "TimeSeries [fp=" + fp + ", count=" + count + "]";
 	}
 }

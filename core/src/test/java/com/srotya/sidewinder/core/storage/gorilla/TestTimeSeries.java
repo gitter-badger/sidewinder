@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
 
+import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.storage.DataPoint;
 
 /**
@@ -36,7 +37,7 @@ import com.srotya.sidewinder.core.storage.DataPoint;
 public class TestTimeSeries {
 
 	@Test
-	public void testReadWriteLongs() {
+	public void testReadWriteLongs() throws RejectException {
 		long ts = System.currentTimeMillis();
 		int count = 10000;
 		TimeSeries series = new TimeSeries(false, ts);
@@ -60,7 +61,7 @@ public class TestTimeSeries {
 	}
 
 	@Test
-	public void testReadWriteDoubles() {
+	public void testReadWriteDoubles() throws RejectException {
 		long ts = System.currentTimeMillis();
 		int count = 1000;
 		TimeSeries series = new TimeSeries(false, ts);
@@ -81,7 +82,7 @@ public class TestTimeSeries {
 	}
 
 	@Test
-	public void testCompressionRatios() {
+	public void testCompressionRatios() throws RejectException {
 		long ts = System.currentTimeMillis();
 		TimeSeries series = new TimeSeries(false, ts);
 		for (int i = 0; i < 10000; i++) {
@@ -110,7 +111,7 @@ public class TestTimeSeries {
 	}
 
 	@Test
-	public void testConcurrentReadWrites() {
+	public void testConcurrentReadWrites() throws RejectException {
 		final long ts = System.currentTimeMillis();
 		final TimeSeries series = new TimeSeries(false, ts);
 		final AtomicBoolean startFlag = new AtomicBoolean(false);

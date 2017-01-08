@@ -25,7 +25,7 @@ public class DataPoint implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private boolean isFp;
-	private String seriesName;
+	private String measurementName;
 	private List<String> tags;
 	private long timestamp;
 	private long value;
@@ -35,15 +35,15 @@ public class DataPoint implements Serializable {
 		this.value = value;
 	}
 
-	public DataPoint(String seriesName, List<String> tags, long timestamp, long value) {
-		this.seriesName = seriesName;
+	public DataPoint(String measurementName, List<String> tags, long timestamp, long value) {
+		this.measurementName = measurementName;
 		this.tags = tags;
 		this.timestamp = timestamp;
 		this.value = value;
 	}
 
 	public DataPoint(String seriesName, List<String> tags, long timestamp, double value) {
-		this.seriesName = seriesName;
+		this.measurementName = seriesName;
 		this.tags = tags;
 		this.timestamp = timestamp;
 		this.value = Double.doubleToLongBits(value);
@@ -52,16 +52,16 @@ public class DataPoint implements Serializable {
 	/**
 	 * @return the seriesName
 	 */
-	public String getSeriesName() {
-		return seriesName;
+	public String getMeasurementName() {
+		return measurementName;
 	}
 
 	/**
-	 * @param seriesName
-	 *            the seriesName to set
+	 * @param measurementName
+	 *            the measurementName to set
 	 */
-	public void setSeriesName(String seriesName) {
-		this.seriesName = seriesName;
+	public void setMeasurementName(String measurementName) {
+		this.measurementName = measurementName;
 	}
 
 	/**
@@ -139,9 +139,9 @@ public class DataPoint implements Serializable {
 	@Override
 	public String toString() {
 		if (isFp) {
-			return "DataPoint [seriesName=" + seriesName + ", timestamp=" + timestamp + ", value=" + getValue() + "]";
+			return "DataPoint [measurementName=" + measurementName + ", timestamp=" + timestamp + ", value=" + getValue() + "]";
 		} else {
-			return "DataPoint [seriesName=" + seriesName + ", timestamp=" + timestamp + ", value=" + getLongValue() + "]";
+			return "DataPoint [measurementName=" + measurementName + ", timestamp=" + timestamp + ", value=" + getLongValue() + "]";
 		}
 	}
 

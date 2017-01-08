@@ -27,7 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
 
-import com.srotya.sidewinder.core.PerformantException;
+import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.gorilla.ByteBufferBitInput;
 import com.srotya.sidewinder.core.storage.gorilla.ByteBufferBitOutput;
@@ -81,7 +81,7 @@ public class TestGorillaCompression {
 		try {
 			assertNull(d.readPair());
 			fail("End of stream, shouldn't be able to read any more");
-		} catch (PerformantException e) {
+		} catch (RejectException e) {
 		}
 	}
 
@@ -134,7 +134,7 @@ public class TestGorillaCompression {
 		try {
 			assertNull(d.readPair());
 			fail("End of stream, shouldn't be able to read any more");
-		} catch (PerformantException e) {
+		} catch (RejectException e) {
 		}
 	}
 
@@ -185,7 +185,7 @@ public class TestGorillaCompression {
 		try {
 			assertNull(d.readPair());
 			fail("End of stream, shouldn't be able to read any more");
-		} catch (PerformantException e) {
+		} catch (RejectException e) {
 		}
 	}
 
@@ -210,7 +210,7 @@ public class TestGorillaCompression {
 		try {
 			assertNull(d.readPair());
 			fail("End of stream, shouldn't be able to read any more");
-		} catch (PerformantException e) {
+		} catch (RejectException e) {
 		}
 	}
 
@@ -260,7 +260,7 @@ public class TestGorillaCompression {
 		try {
 			assertNull(d.readPair());
 			fail("End of stream, shouldn't be able to read any more");
-		} catch (PerformantException e) {
+		} catch (RejectException e) {
 		}
 	}
 }

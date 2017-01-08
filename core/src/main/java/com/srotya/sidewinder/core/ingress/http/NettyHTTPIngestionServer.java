@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.srotya.sidewinder.core.storage.StorageEngine;
-import com.srotya.sidewinder.core.storage.gorilla.GorillaStorageEngine;
+import com.srotya.sidewinder.core.storage.gorilla.MemStorageEngine;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -75,7 +75,7 @@ public class NettyHTTPIngestionServer {
 	}
 
 	public static void main(String[] args) throws InterruptedException, IOException {
-		StorageEngine engine = new GorillaStorageEngine();
+		StorageEngine engine = new MemStorageEngine();
 		engine.configure(new HashMap<>());
 		NettyHTTPIngestionServer server = new NettyHTTPIngestionServer();
 		server.init(engine, new HashMap<>());

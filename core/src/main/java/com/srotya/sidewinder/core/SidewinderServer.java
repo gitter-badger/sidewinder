@@ -22,8 +22,9 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import com.srotya.sidewinder.core.api.GrafanaQueryApi;
+import com.srotya.sidewinder.core.ingress.http.NettyHTTPIngestionServer;
 import com.srotya.sidewinder.core.storage.StorageEngine;
-import com.srotya.sidewinder.core.storage.gorilla.GorillaStorageEngine;
+import com.srotya.sidewinder.core.storage.gorilla.MemStorageEngine;
 
 import io.dropwizard.Application;
 import io.dropwizard.setup.Environment;
@@ -39,19 +40,20 @@ public class SidewinderServer extends Application<SidewinderConfig> {
 
 	@Override
 	public void run(SidewinderConfig config, Environment env) throws Exception {
-		storageEngine = new GorillaStorageEngine();
+		storageEngine = new MemStorageEngine();
 		storageEngine.configure(new HashMap<>());
 		env.jersey().register(new GrafanaQueryApi(storageEngine));
-		Random rand = new Random();
-		// ZoneId utc = ZoneId.of("America/Los_Angeles");
-		// Clock system = Clock.system(utc);
-		long ts = 28800000 + System.currentTimeMillis() - (100 * 60000);
-		for (int i = 0; i < 60; i++) {
-			long v = ts + (i * 60000);
-			System.out.println("Input time:" + new Date(v));
-			storageEngine.writeSeries("test", "cpu", new ArrayList<>(), TimeUnit.MILLISECONDS, v, rand.nextInt() * 100,
-					null);
-		}
+		NettyHTTPIngestionServer server = new NettyHTTPIngestionServer();
+		server.init(storageEngine, new HashMap<>());
+		server.start();
+//		Random rand = new Random();
+//		long ts = System.currentTimeMillis() - (900 * 60000);
+//		for (int i = 0; i < 600; i++) {
+//			long v = ts + (i * 60000);
+//			System.out.println("Input time:" + new Date(v));
+//			storageEngine.writeSeries("test", "cpu", new ArrayList<>(), TimeUnit.MILLISECONDS, v, rand.nextInt() * 10.5,
+//					null);
+//		}
 	}
 
 	/**

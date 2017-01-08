@@ -41,15 +41,15 @@ public class SeriesDataPointWriter extends ChannelInboundHandlerAdapter {
 			return;
 		}
 		DataPoint dp = (DataPoint) msg;
-		if (dp.getSeriesName().isEmpty()) {
+		if (dp.getMeasurementName().isEmpty()) {
 			return;
 		}
 		try {
 			if (dp.isFp()) {
-				engine.writeSeries(null, dp.getSeriesName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
+				engine.writeSeries(null, dp.getMeasurementName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
 						dp.getValue(), null);
 			} else {
-				engine.writeSeries(null, dp.getSeriesName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
+				engine.writeSeries(null, dp.getMeasurementName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
 						dp.getLongValue(), null);
 			}
 

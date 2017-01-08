@@ -124,9 +124,10 @@ public class TimeUtils {
 	 */
 	public static int getWindowFlooredNaturalTime(int timeInSeconds, int bucketInSeconds) {
 		/**
-		 * bit shifting division and multiplication doesn't outperform the JIT compiler
+		 * bit shifting division and multiplication doesn't outperform the JIT
+		 * compiler
 		 */
-//		return (timeInSeconds >> bucketInSeconds) << bucketInSeconds; 
+		// return (timeInSeconds >> bucketInSeconds) << bucketInSeconds;
 		return ((timeInSeconds / bucketInSeconds) * bucketInSeconds);
 	}
 
