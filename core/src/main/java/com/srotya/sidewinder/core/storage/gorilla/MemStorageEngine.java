@@ -59,14 +59,19 @@ public class MemStorageEngine implements StorageEngine {
 	@Override
 	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
 			List<String> tags, Predicate valuePredicate) {
+		if (startTime > endTime) {
+			startTime = startTime ^ endTime;
+			endTime = endTime ^ startTime;
+			startTime = startTime ^ endTime;
+		}
 		List<DataPoint> points = new ArrayList<>();
 		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
 		if (measurementMap != null) {
 			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
 			if (seriesMap != null) {
 				BetweenPredicate timeRangePredicate = new BetweenPredicate(startTime, endTime);
-				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT)
-						- TIME_BUCKET_CONSTANT;
+				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT);
+				// - TIME_BUCKET_CONSTANT;
 				String startTsBucket = Integer.toHexString(tsStartBucket);
 				int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
 				String endTsBucket = Integer.toHexString(tsEndBucket);
@@ -76,16 +81,14 @@ public class MemStorageEngine implements StorageEngine {
 					TimeSeries timeSeries = seriesMap.get(startTsBucket);
 					if (timeSeries != null) {
 						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
-						// System.out.println("Count of points:" +
-						// timeSeries.getCount() + "\t" + points.size());
 					}
 				} else {
 					for (TimeSeries timeSeries : series.values()) {
 						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
-						// System.out.println("Count of points:" +
-						// timeSeries.getCount() + "\t" + points.size());
 					}
 				}
+				// System.out.println("Count of points:" +
+				// timeSeries.getCount() + "\t" + points.size());
 			} else {
 				System.out.println("Measurement not found:" + measurementName);
 			}
@@ -237,6 +240,17 @@ public class MemStorageEngine implements StorageEngine {
 	@Override
 	public void dropDatabase(String dbName) throws Exception {
 		databaseMap.remove(dbName);
+	}
+
+	/**
+	 * Function for unit testing
+	 * 
+	 * @param dbName
+	 * @param measurementName
+	 * @return
+	 */
+	protected SortedMap<String, TimeSeries> getSeriesMap(String dbName, String measurementName) {
+		return databaseMap.get(dbName).get(measurementName);
 	}
 
 	@Override

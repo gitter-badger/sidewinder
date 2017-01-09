@@ -16,11 +16,13 @@
 package com.srotya.sidewinder.core.storage.gorilla;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,7 @@ import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.StorageEngine;
+import com.srotya.sidewinder.core.utils.TimeUtils;
 
 /**
  * Unit tests for {@link MemStorageEngine}
@@ -116,15 +119,72 @@ public class TestMemStorageEngine {
 	}
 
 	@Test
+	public void testSeriesBucketLookups() throws IOException {
+		MemStorageEngine engine = new MemStorageEngine();
+		engine.configure(new HashMap<>());
+		engine.connect();
+		String dbName = "test1";
+		String measurementName = "cpu";
+		List<String> tags = Arrays.asList("test");
+
+		long ts = 1483923600000L;
+		System.out.println("Base timestamp=" + new Date(ts));
+
+		for (int i = 0; i < 100; i++) {
+			engine.writeSeries(dbName, measurementName, tags, TimeUnit.MILLISECONDS, ts + (i * 60000), 2.2, null);
+		}
+		System.out.println("Buckets:" + engine.getSeriesMap(dbName, measurementName).size());
+		long endTs = ts + 99 * 60000;
+
+		// validate all points are returned with a full range query
+		List<DataPoint> points = engine.queryDataPoints(dbName, measurementName, ts, endTs, tags, null);
+		assertEquals(ts, points.get(0).getTimestamp());
+		assertEquals(endTs, points.get(points.size() - 1).getTimestamp());
+
+		// validate ts-1 yields the same result
+		points = engine.queryDataPoints(dbName, measurementName, ts - 1, endTs, tags, null);
+		assertEquals(ts, points.get(0).getTimestamp());
+		assertEquals(endTs, points.get(points.size() - 1).getTimestamp());
+
+		// validate ts+1 yields correct result
+		points = engine.queryDataPoints(dbName, measurementName, ts + 1, endTs, tags, null);
+		assertEquals(ts + 60000, points.get(0).getTimestamp());
+		assertEquals(endTs, points.get(points.size() - 1).getTimestamp());
+
+		// validate that points have been written to 2 different buckets
+		assertTrue(TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, ts, 4096) != TimeUtils
+				.getTimeBucket(TimeUnit.MILLISECONDS, endTs, 4096));
+		// calculate base timestamp for the second bucket
+		long baseTs2 = ((long) TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTs, 4096)) * 1000;
+		System.out.println("Bucket2 base timestamp=" + new Date(baseTs2));
+
+		// validate random seek with deliberate time offset
+		points = engine.queryDataPoints(dbName, measurementName, ts, baseTs2, tags, null);
+		assertEquals("Invalid first entry:" + new Date(points.get(0).getTimestamp()), ts, points.get(0).getTimestamp());
+		assertEquals("Invalid first entry:" + (baseTs2 - ts), (baseTs2 / 60000) * 60000,
+				points.get(points.size() - 1).getTimestamp());
+
+		points = engine.queryDataPoints(dbName, measurementName, baseTs2, endTs, tags, null);
+		assertEquals("Invalid first entry:" + new Date(points.get(0).getTimestamp()), (baseTs2 - ts),
+				(baseTs2 / 60000) * 60000, points.get(0).getTimestamp());
+		assertEquals("Invalid first entry:" + endTs, endTs, points.get(points.size() - 1).getTimestamp());
+
+		// validate correct results when time range is incorrectly swapped i.e.
+		// end time is smaller than start time
+		points = engine.queryDataPoints(dbName, measurementName, endTs - 1, baseTs2, tags, null);
+		assertEquals("Invalid first entry:" + new Date(points.get(0).getTimestamp()), (baseTs2 - ts),
+				(baseTs2 / 60000) * 60000, points.get(0).getTimestamp());
+		assertEquals("Invalid first entry:" + endTs, endTs - 60000, points.get(points.size() - 1).getTimestamp());
+	}
+
+	@Test
 	public void testBaseTimeSeriesWrites() throws Exception {
 		MemStorageEngine engine = new MemStorageEngine();
 		engine.configure(new HashMap<>());
 		engine.connect();
 
 		final long ts1 = System.currentTimeMillis();
-
 		ExecutorService es = Executors.newCachedThreadPool();
-
 		for (int k = 0; k < 500; k++) {
 			final int p = k;
 			es.submit(() -> {
