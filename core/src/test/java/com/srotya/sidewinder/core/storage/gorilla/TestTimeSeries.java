@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
 
-import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.RejectException;
 
 /**
  * Unit tests for {@link TimeSeries}

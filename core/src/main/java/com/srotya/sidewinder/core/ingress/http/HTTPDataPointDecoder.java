@@ -138,7 +138,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 			}
 			long timestamp = System.currentTimeMillis();
 			if (parts.length == 3) {
-				timestamp = Long.parseLong(parts[2]) / 1000;
+				timestamp = Long.parseLong(parts[2]) / (1000 * 1000);
 			}
 			String[] key = parts[0].split(",");
 			String seriesName = key[0];

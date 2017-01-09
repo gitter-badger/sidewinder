@@ -149,6 +149,12 @@ public class TestAbstractStorageEngine {
 			return null;
 		}
 
+		@Override
+		public void dropMeasurement(String dbName, String measurementName) throws Exception {
+			// TODO Auto-generated method stub
+			
+		}
+
 	}
 
 }

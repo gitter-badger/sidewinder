@@ -27,8 +27,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
 
-import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.gorilla.ByteBufferBitInput;
 import com.srotya.sidewinder.core.storage.gorilla.ByteBufferBitOutput;
 import com.srotya.sidewinder.core.storage.gorilla.Reader;

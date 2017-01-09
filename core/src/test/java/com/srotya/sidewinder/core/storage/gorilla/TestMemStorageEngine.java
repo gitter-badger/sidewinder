@@ -33,10 +33,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
-import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 import com.srotya.sidewinder.core.utils.TimeUtils;
 

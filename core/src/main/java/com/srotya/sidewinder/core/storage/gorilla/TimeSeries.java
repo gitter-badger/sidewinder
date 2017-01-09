@@ -18,8 +18,8 @@ package com.srotya.sidewinder.core.storage.gorilla;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
-import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.Predicate;
+import com.srotya.sidewinder.core.storage.RejectException;
 
 /**
  * In-memory representation of a time series based on Gorilla compression. This

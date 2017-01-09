@@ -29,11 +29,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
-import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.Callback;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 import com.srotya.sidewinder.core.utils.TimeUtils;
 
@@ -60,6 +60,7 @@ public class MemStorageEngine implements StorageEngine {
 	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
 			List<String> tags, Predicate valuePredicate) {
 		if (startTime > endTime) {
+			// swap start and end times if they are off
 			startTime = startTime ^ endTime;
 			endTime = endTime ^ startTime;
 			startTime = startTime ^ endTime;
@@ -70,8 +71,7 @@ public class MemStorageEngine implements StorageEngine {
 			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
 			if (seriesMap != null) {
 				BetweenPredicate timeRangePredicate = new BetweenPredicate(startTime, endTime);
-				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT);
-				// - TIME_BUCKET_CONSTANT;
+				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT) - TIME_BUCKET_CONSTANT;
 				String startTsBucket = Integer.toHexString(tsStartBucket);
 				int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
 				String endTsBucket = Integer.toHexString(tsEndBucket);
@@ -242,6 +242,10 @@ public class MemStorageEngine implements StorageEngine {
 		databaseMap.remove(dbName);
 	}
 
+	@Override
+	public void dropMeasurement(String dbName, String measurementName) throws Exception {
+		databaseMap.get(dbName).remove(measurementName);
+	}
 	/**
 	 * Function for unit testing
 	 * 

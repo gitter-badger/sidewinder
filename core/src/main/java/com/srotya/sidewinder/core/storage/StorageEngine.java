@@ -89,4 +89,6 @@ public interface StorageEngine {
 
 	public void dropDatabase(String dbName) throws Exception;
 
+	public void dropMeasurement(String dbName, String measurementName) throws Exception;
+
 }

@@ -303,4 +303,10 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public void dropMeasurement(String dbName, String measurementName) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
 }

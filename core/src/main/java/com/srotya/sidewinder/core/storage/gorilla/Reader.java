@@ -17,9 +17,9 @@ package com.srotya.sidewinder.core.storage.gorilla;
 
 import java.io.IOException;
 
-import com.srotya.sidewinder.core.RejectException;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.RejectException;
 
 /**
  * Decompresses a compressed stream done created by the Compressor. Returns

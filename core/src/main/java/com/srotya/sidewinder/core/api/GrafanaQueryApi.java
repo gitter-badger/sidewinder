@@ -47,7 +47,7 @@ import com.srotya.sidewinder.core.storage.StorageEngine;
  * @author ambud
  *
  */
-@Path("/databases/{" + DatabaseOpsApi.DB_NAME + "}")
+@Path("/{" + DatabaseOpsApi.DB_NAME + "}")
 public class GrafanaQueryApi {
 
 	private StorageEngine engine;
@@ -60,11 +60,11 @@ public class GrafanaQueryApi {
 
 	@Path("/hc")
 	@GET
-	public String getHealth(@PathParam(DatabaseOpsApi.DB_NAME) String dbName) {
-		try {
-			engine.checkIfExists(dbName);
+	public String getHealth(@PathParam(DatabaseOpsApi.DB_NAME) String dbName) throws Exception {
+		System.err.println("Checking db name:" + dbName);
+		if (engine.checkIfExists(dbName)) {
 			return "true";
-		} catch (Exception e) {
+		} else {
 			throw new NotFoundException("Database:" + dbName + " doesn't exist");
 		}
 	}
@@ -81,9 +81,9 @@ public class GrafanaQueryApi {
 		JsonObject range = json.get("range").getAsJsonObject();
 		long startTs = sdf.parse(range.get("from").getAsString()).getTime();
 		long endTs = sdf.parse(range.get("to").getAsString()).getTime();
-		
-		startTs = tz.getOffset(startTs)+startTs;
-		endTs = tz.getOffset(endTs)+endTs;
+
+		startTs = tz.getOffset(startTs) + startTs;
+		endTs = tz.getOffset(endTs) + endTs;
 
 		System.out.println("From:" + new Date(startTs) + "\tTo:" + new Date(endTs) + "\tRaw To:" + range);
 		List<String> measurementNames = new ArrayList<>();

@@ -15,13 +15,10 @@
  */
 package com.srotya.sidewinder.core;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import com.srotya.sidewinder.core.api.GrafanaQueryApi;
+import com.srotya.sidewinder.core.api.MeasurementOpsApi;
 import com.srotya.sidewinder.core.ingress.http.NettyHTTPIngestionServer;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 import com.srotya.sidewinder.core.storage.gorilla.MemStorageEngine;
@@ -43,17 +40,10 @@ public class SidewinderServer extends Application<SidewinderConfig> {
 		storageEngine = new MemStorageEngine();
 		storageEngine.configure(new HashMap<>());
 		env.jersey().register(new GrafanaQueryApi(storageEngine));
+		env.jersey().register(new MeasurementOpsApi(storageEngine));
 		NettyHTTPIngestionServer server = new NettyHTTPIngestionServer();
 		server.init(storageEngine, new HashMap<>());
 		server.start();
-//		Random rand = new Random();
-//		long ts = System.currentTimeMillis() - (900 * 60000);
-//		for (int i = 0; i < 600; i++) {
-//			long v = ts + (i * 60000);
-//			System.out.println("Input time:" + new Date(v));
-//			storageEngine.writeSeries("test", "cpu", new ArrayList<>(), TimeUnit.MILLISECONDS, v, rand.nextInt() * 10.5,
-//					null);
-//		}
 	}
 
 	/**
