@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.StorageEngine;
@@ -59,6 +60,7 @@ import io.netty.util.CharsetUtil;
  */
 public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 
+	private static final Logger logger = Logger.getLogger(HTTPDataPointDecoder.class.getName());
 	private StringBuilder responseString = new StringBuilder();
 	private HttpRequest request;
 	private StorageEngine engine;
@@ -100,7 +102,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 					String payload = byteBuf.toString(CharsetUtil.UTF_8);
 					List<DataPoint> dps = dataPointsFromString(payload);
 					for (DataPoint dp : dps) {
-						System.out.println("Datapoint:" + dp + "\t" + new Date(dp.getTimestamp()));
+						logger.fine("Datapoint:" + dp + "\t" + new Date(dp.getTimestamp()));
 						try {
 							engine.writeDataPoint(dbName, dp);
 						} catch (IOException e) {

@@ -32,6 +32,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
 /**
@@ -72,7 +73,11 @@ public class MeasurementOpsApi {
 	@Produces({ MediaType.APPLICATION_JSON })
 	public List<DataPoint> getAllOfMeasurement(@PathParam(DatabaseOpsApi.DB_NAME) String dbName,
 			@PathParam(MEASUREMENT) String measurementName) {
-		return engine.queryDataPoints(dbName, measurementName, 0, Long.MAX_VALUE, Arrays.asList(""), null);
+		try {
+			return engine.queryDataPoints(dbName, measurementName, 0, Long.MAX_VALUE, Arrays.asList(""), null);
+		} catch (ItemNotFoundException e) {
+			throw new NotFoundException(e.getMessage());
+		}
 	}
 
 	@GET

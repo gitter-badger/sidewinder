@@ -37,7 +37,7 @@ public class TestHttpDataPointDecoder {
 		assertTrue(dp.getTags().contains("host=server01"));
 		assertTrue(dp.getTags().contains("region=uswest"));
 		assertEquals(1, dp.getLongValue());
-		assertEquals(1434055562000000000L/1000, dp.getTimestamp());
+		assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
 	}
 
 	@Test
@@ -49,7 +49,7 @@ public class TestHttpDataPointDecoder {
 			assertTrue(dp.getTags().contains("host=server01"));
 			assertTrue(dp.getTags().contains("region=uswest"));
 			assertEquals(1, dp.getLongValue());
-			assertEquals(1434055562000000000L/1000, dp.getTimestamp());
+			assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
 		}
 	}
 
@@ -64,13 +64,13 @@ public class TestHttpDataPointDecoder {
 		assertEquals("cpu-value", dp.getMeasurementName());
 		assertEquals(0, dp.getTags().size());
 		assertEquals(1, dp.getLongValue());
-		assertEquals(1434055562000000000L/1000, dp.getTimestamp());
+		assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
 
 		dp = dps.get(1);
 		assertEquals("cpu-value1", dp.getMeasurementName());
 		assertEquals(0, dp.getTags().size());
 		assertEquals(2, dp.getLongValue());
-		assertEquals(1434055562000000000L/1000, dp.getTimestamp());
+		assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
 	}
 
 	@Test
@@ -82,7 +82,7 @@ public class TestHttpDataPointDecoder {
 		assertEquals("cpu-value", dp.getMeasurementName());
 		assertEquals(0, dp.getTags().size());
 		assertEquals(1, dp.getLongValue());
-		assertEquals(1434055562000000000L/1000, dp.getTimestamp());
+		assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
 	}
 
 	@Test
@@ -95,7 +95,6 @@ public class TestHttpDataPointDecoder {
 		assertEquals(0, dp.getTags().size());
 		assertEquals(1, dp.getLongValue());
 		long ts = System.currentTimeMillis();
-		System.err.println(ts);
 		assertEquals(1, (dp.getTimestamp() / ts));
 	}
 

@@ -36,6 +36,7 @@ import org.junit.Test;
 import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 import com.srotya.sidewinder.core.utils.TimeUtils;
@@ -71,7 +72,7 @@ public class TestMemStorageEngine {
 	}
 
 	@Test
-	public void testQueryDataPoints() throws IOException {
+	public void testQueryDataPoints() throws IOException, ItemNotFoundException {
 		StorageEngine engine = new MemStorageEngine();
 		engine.configure(conf);
 		long ts = System.currentTimeMillis();
@@ -119,7 +120,7 @@ public class TestMemStorageEngine {
 	}
 
 	@Test
-	public void testSeriesBucketLookups() throws IOException {
+	public void testSeriesBucketLookups() throws IOException, ItemNotFoundException {
 		MemStorageEngine engine = new MemStorageEngine();
 		engine.configure(new HashMap<>());
 		engine.connect();

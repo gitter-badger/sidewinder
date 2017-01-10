@@ -33,6 +33,7 @@ import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.Callback;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 import com.srotya.sidewinder.core.utils.TimeUtils;
@@ -58,7 +59,7 @@ public class MemStorageEngine implements StorageEngine {
 
 	@Override
 	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags, Predicate valuePredicate) {
+			List<String> tags, Predicate valuePredicate) throws ItemNotFoundException {
 		if (startTime > endTime) {
 			// swap start and end times if they are off
 			startTime = startTime ^ endTime;
@@ -90,10 +91,10 @@ public class MemStorageEngine implements StorageEngine {
 				// System.out.println("Count of points:" +
 				// timeSeries.getCount() + "\t" + points.size());
 			} else {
-				System.out.println("Measurement not found:" + measurementName);
+				throw new ItemNotFoundException("Measurement "+measurementName+" not found");
 			}
 		} else {
-			System.out.println("DB not found:" + dbName);
+			throw new ItemNotFoundException("Database "+dbName+" not found");
 		}
 		return points;
 	}

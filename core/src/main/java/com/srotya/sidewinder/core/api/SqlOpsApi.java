@@ -33,10 +33,10 @@ import com.srotya.sidewinder.core.storage.StorageEngine;
 @Path("/database/{" + DatabaseOpsApi.DB_NAME + "}")
 public class SqlOpsApi {
 
-	private StorageEngine storageEngine;
+//	private StorageEngine storageEngine;
 
 	public SqlOpsApi(StorageEngine storageEngine) {
-		this.storageEngine = storageEngine;
+//		this.storageEngine = storageEngine;
 	}
 
 	@Consumes({ MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN })

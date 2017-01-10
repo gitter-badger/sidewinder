@@ -13,30 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.api;
-
-import java.util.List;
-
-import javax.ws.rs.Path;
-
-import com.srotya.sidewinder.core.storage.StorageEngine;
+package com.srotya.sidewinder.core.storage;
 
 /**
  * @author ambud
  */
-@Path("/correlate/database/{dbName}/series/{" + CorrelationOpsApi.SERIES_NAME + "}")
-public class CorrelationOpsApi {
+public class ItemNotFoundException extends Exception {
 
-	public static final String SERIES_NAME = "seriesName";
+	private static final long serialVersionUID = 1L;
 
-	public CorrelationOpsApi(StorageEngine storageEngine) {
+	public ItemNotFoundException() {
+		super();
 	}
 
-	
-	public List<String> correlateSeries(String seriesBlock) {
-//		correlation.correlation(xArray, yArray)
-		
-		return null;
+	public ItemNotFoundException(String message, Throwable cause, boolean enableSuppression,
+			boolean writableStackTrace) {
+		super(message, cause, enableSuppression, writableStackTrace);
 	}
-	
+
+	public ItemNotFoundException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	public ItemNotFoundException(String message) {
+		super(message);
+	}
+
+	public ItemNotFoundException(Throwable cause) {
+		super(cause);
+	}
+
 }

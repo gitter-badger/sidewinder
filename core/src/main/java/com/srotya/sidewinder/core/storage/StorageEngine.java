@@ -75,7 +75,7 @@ public interface StorageEngine {
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException;
 
 	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags, Predicate valuePredicate);
+			List<String> tags, Predicate valuePredicate) throws ItemNotFoundException;
 
 	public Set<String> getMeasurementsLike(String dbName, String partialMeasurementName) throws IOException;
 

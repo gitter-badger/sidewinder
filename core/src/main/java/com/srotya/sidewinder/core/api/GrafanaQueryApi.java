@@ -20,7 +20,6 @@ import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
@@ -41,6 +40,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
 /**
@@ -77,7 +77,7 @@ public class GrafanaQueryApi {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		JsonObject json = gson.fromJson(query, JsonObject.class);
-		System.err.println(gson.toJson(json));
+		// System.err.println(gson.toJson(json));
 		JsonObject range = json.get("range").getAsJsonObject();
 		long startTs = sdf.parse(range.get("from").getAsString()).getTime();
 		long endTs = sdf.parse(range.get("to").getAsString()).getTime();
@@ -85,7 +85,7 @@ public class GrafanaQueryApi {
 		startTs = tz.getOffset(startTs) + startTs;
 		endTs = tz.getOffset(endTs) + endTs;
 
-		System.out.println("From:" + new Date(startTs) + "\tTo:" + new Date(endTs) + "\tRaw To:" + range);
+		// System.out.println("From:" + new Date(startTs) + "\tTo:" + new Date(endTs) + "\tRaw To:" + range);
 		List<String> measurementNames = new ArrayList<>();
 		JsonArray targets = json.get("targets").getAsJsonArray();
 		for (int i = 0; i < targets.size(); i++) {
@@ -97,7 +97,12 @@ public class GrafanaQueryApi {
 
 		List<Target> output = new ArrayList<>();
 		for (String measurementName : measurementNames) {
-			List<DataPoint> points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, null, null);
+			List<DataPoint> points;
+			try {
+				points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, null, null);
+			} catch (ItemNotFoundException e) {
+				throw new NotFoundException(e.getMessage());
+			}
 			Target tar = new Target(measurementName);
 			for (DataPoint dataPoint : points) {
 				if (!dataPoint.isFp()) {
