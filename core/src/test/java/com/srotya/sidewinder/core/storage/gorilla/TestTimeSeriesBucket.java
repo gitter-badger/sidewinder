@@ -30,19 +30,19 @@ import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.RejectException;
 
 /**
- * Unit tests for {@link TimeSeries}
+ * Unit tests for {@link TimeSeriesBucket}
  * 
  * @author ambud
  */
-public class TestTimeSeries {
+public class TestTimeSeriesBucket {
 
 	@Test
 	public void testReadWriteLongs() throws RejectException {
 		long ts = System.currentTimeMillis();
 		int count = 10000;
-		TimeSeries series = new TimeSeries(false, ts);
+		TimeSeriesBucket series = new TimeSeriesBucket(ts);
 		for (int i = 0; i < count; i++) {
-			series.addDatapoint(ts + (i * 1000), i);
+			series.addDataPoint(ts + (i * 1000), i);
 		}
 		Reader reader = series.getReader(null, null);
 		assertEquals(count, series.getCount());
@@ -64,9 +64,9 @@ public class TestTimeSeries {
 	public void testReadWriteDoubles() throws RejectException {
 		long ts = System.currentTimeMillis();
 		int count = 1000;
-		TimeSeries series = new TimeSeries(false, ts);
+		TimeSeriesBucket series = new TimeSeriesBucket(ts);
 		for (int i = 0; i < 1000; i++) {
-			series.addDatapoint(ts + (i * 1000), i * 1.2);
+			series.addDataPoint(ts + (i * 1000), i * 1.2);
 		}
 		Reader reader = series.getReader(null, null);
 		assertEquals(count, series.getCount());
@@ -84,28 +84,28 @@ public class TestTimeSeries {
 	@Test
 	public void testCompressionRatios() throws RejectException {
 		long ts = System.currentTimeMillis();
-		TimeSeries series = new TimeSeries(false, ts);
+		TimeSeriesBucket series = new TimeSeriesBucket(ts);
 		for (int i = 0; i < 10000; i++) {
-			series.addDatapoint(ts + (i * 1000), i);
+			series.addDataPoint(ts + (i * 1000), i);
 		}
 		System.out.println("Test compression ratio (10K longs 1s frequency):" + series.getCompressionRatio());
 
-		series = new TimeSeries(false, ts);
+		series = new TimeSeriesBucket(ts);
 		for (int i = 0; i < 10000; i++) {
-			series.addDatapoint(ts + i, i);
+			series.addDataPoint(ts + i, i);
 		}
 		System.out.println("Test compression ratio (10K longs 1ms frequency):" + series.getCompressionRatio());
 
-		series = new TimeSeries(true, ts);
+		series = new TimeSeriesBucket(ts);
 		for (int i = 0; i < 10000; i++) {
-			series.addDatapoint(ts + (i * 1000), i * 1.2);
+			series.addDataPoint(ts + (i * 1000), i * 1.2);
 		}
 		System.out.println("Test compression ratio (10K double 1s frequency):" + series.getCompressionRatio());
 
-		series = new TimeSeries(false, ts);
+		series = new TimeSeriesBucket(ts);
 		Random rand = new Random();
 		for (int i = 0; i < 10000; i++) {
-			series.addDatapoint(ts + (i * 1000), rand.nextLong());
+			series.addDataPoint(ts + (i * 1000), rand.nextLong());
 		}
 		System.out.println("Test compression ratio (10K random 1s frequency):" + series.getCompressionRatio());
 	}
@@ -113,7 +113,7 @@ public class TestTimeSeries {
 	@Test
 	public void testConcurrentReadWrites() throws RejectException {
 		final long ts = System.currentTimeMillis();
-		final TimeSeries series = new TimeSeries(false, ts);
+		final TimeSeriesBucket series = new TimeSeriesBucket(ts);
 		final AtomicBoolean startFlag = new AtomicBoolean(false);
 		ExecutorService es = Executors.newCachedThreadPool();
 		for (int i = 0; i < 2; i++) {
@@ -146,7 +146,7 @@ public class TestTimeSeries {
 
 		startFlag.set(true);
 		for (int i = 0; i < 20; i++) {
-			series.addDatapoint(ts + i, i * 1.2);
+			series.addDataPoint(ts + i, i * 1.2);
 			try {
 				Thread.sleep(50);
 			} catch (InterruptedException e) {

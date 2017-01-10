@@ -86,6 +86,8 @@ public interface StorageEngine {
 	public void deleteAllData() throws Exception;
 
 	public boolean checkIfExists(String dbName) throws Exception;
+	
+	public boolean checkIfExists(String dbName, String measurement) throws Exception;
 
 	public void dropDatabase(String dbName) throws Exception;
 

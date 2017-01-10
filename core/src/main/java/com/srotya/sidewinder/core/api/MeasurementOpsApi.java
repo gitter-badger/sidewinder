@@ -63,9 +63,21 @@ public class MeasurementOpsApi {
 	@Path("/check")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
-	public void checkSeries(@PathParam(DatabaseOpsApi.DB_NAME) String dbName,
-			@PathParam(MEASUREMENT) String seriesName) {
-
+	public String checkMeasurement(@PathParam(DatabaseOpsApi.DB_NAME) String dbName,
+			@PathParam(MEASUREMENT) String measurementName) throws Exception {
+		try {
+			if (engine.checkIfExists(dbName, measurementName)) {
+				return "true";
+			} else {
+				throw new NotFoundException("Measurement / database not found:" + dbName + "/" + measurementName);
+			}
+		} catch (Exception e) {
+			if (e instanceof NotFoundException) {
+				throw e;
+			} else {
+				throw new InternalServerErrorException(e);
+			}
+		}
 	}
 
 	@Path("/all")
@@ -99,9 +111,10 @@ public class MeasurementOpsApi {
 				startTs = sdf.parse(startTime).getTime();
 				endTs = sdf.parse(endTime).getTime();
 			}
-			List<DataPoint> points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, Arrays.asList(""), null);
+			List<DataPoint> points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, Arrays.asList(""),
+					null);
 			List<Number[]> response = new ArrayList<>();
-			for(DataPoint dataPoint:points) {
+			for (DataPoint dataPoint : points) {
 				if (!dataPoint.isFp()) {
 					response.add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
 				} else {

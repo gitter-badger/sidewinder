@@ -31,6 +31,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
@@ -65,6 +68,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 	private HttpRequest request;
 	private StorageEngine engine;
 	private String dbName;
+	private String path;
 
 	public HTTPDataPointDecoder(StorageEngine engine) {
 		this.engine = engine;
@@ -79,6 +83,8 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 			}
 
 			QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+			path = queryStringDecoder.path();
+
 			Map<String, List<String>> params = queryStringDecoder.parameters();
 			if (!params.isEmpty()) {
 				for (Entry<String, List<String>> p : params.entrySet()) {
@@ -89,23 +95,33 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 				}
 			}
 
+			if (path != null && path.contains("query")) {
+				Gson gson = new Gson();
+				JsonObject obj = new JsonObject();
+				JsonArray ary = new JsonArray();
+				ary.add(new JsonObject());
+				obj.add("results", ary);
+				responseString.append(gson.toJson(obj));
+			}
 		}
 
 		if (msg instanceof HttpContent) {
 			HttpContent httpContent = (HttpContent) msg;
-
 			ByteBuf byteBuf = httpContent.content();
 			if (byteBuf.isReadable()) {
 				if (dbName == null) {
 					responseString.append("Invalid database null");
+					logger.severe("Invalid database null");
 				} else {
 					String payload = byteBuf.toString(CharsetUtil.UTF_8);
+					logger.fine("Request:"+payload);
 					List<DataPoint> dps = dataPointsFromString(payload);
 					for (DataPoint dp : dps) {
-						logger.fine("Datapoint:" + dp + "\t" + new Date(dp.getTimestamp()));
 						try {
 							engine.writeDataPoint(dbName, dp);
+							logger.fine("Accepted:" + dp + "\t" + new Date(dp.getTimestamp()));
 						} catch (IOException e) {
+							logger.fine("Dropped:" + dp + "\t" + e.getMessage());
 							responseString.append("Dropped:" + dp);
 						}
 					}
@@ -131,38 +147,45 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 
 	public static List<DataPoint> dataPointsFromString(String payload) {
 		List<DataPoint> dps = new ArrayList<>();
-		String[] splits = payload.split("\n");
+		String[] splits = payload.split("[\\r\\n]+");
 		for (String split : splits) {
-			String[] parts = split.split("\\s+");
-			if (parts.length < 2 || parts.length > 3) {
-				// invalid datapoint => drop
-				continue;
-			}
-			long timestamp = System.currentTimeMillis();
-			if (parts.length == 3) {
-				timestamp = Long.parseLong(parts[2]) / (1000 * 1000);
-			}
-			String[] key = parts[0].split(",");
-			String seriesName = key[0];
-			List<String> tags = new ArrayList<>();
-			for (int i = 1; i < key.length; i++) {
-				tags.add(key[i]);
-			}
-			String[] fields = parts[1].split(",");
-			for (String field : fields) {
-				String[] fv = field.split("=");
-				String prefix = fv[0];
-				if (fv[1].contains(".")) {
-					double value = Double.parseDouble(fv[1]);
-					DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
-					dp.setFp(true);
-					dps.add(dp);
-				} else {
-					long value = Long.parseLong(fv[1]);
-					DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
-					dp.setFp(false);
-					dps.add(dp);
+			try {
+				String[] parts = split.split("\\s+");
+				if (parts.length < 2 || parts.length > 3) {
+					// invalid datapoint => drop
+					continue;
 				}
+				long timestamp = System.currentTimeMillis();
+				if (parts.length == 3) {
+					timestamp = Long.parseLong(parts[2]) / (1000 * 1000);
+				}
+				String[] key = parts[0].split(",");
+				String seriesName = key[0];
+				List<String> tags = new ArrayList<>();
+				for (int i = 1; i < key.length; i++) {
+					tags.add(key[i]);
+				}
+				String[] fields = parts[1].split(",");
+				for (String field : fields) {
+					String[] fv = field.split("=");
+					String prefix = fv[0];
+					if (fv[1].contains(".")) {
+						double value = Double.parseDouble(fv[1]);
+						DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
+						dp.setFp(true);
+						dps.add(dp);
+					} else {
+						if (fv[1].endsWith("i")) {
+							fv[1] = fv[1].substring(0, fv[1].length() - 1);
+						}
+						long value = Long.parseLong(fv[1]);
+						DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
+						dp.setFp(false);
+						dps.add(dp);
+					}
+				}
+			} catch (Exception e) {
+				logger.fine("Rejected:" + split);
 			}
 		}
 		return dps;

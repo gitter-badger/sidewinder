@@ -67,7 +67,8 @@ public class TestMemStorageEngine {
 		try {
 			engine.writeDataPoint("test", new DataPoint("ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
 		} catch (Exception e) {
-			fail("Engine is initialized, no IO Exception should be thrown");
+			e.printStackTrace();
+			fail("Engine is initialized, no IO Exception should be thrown:"+e.getMessage());
 		}
 	}
 
@@ -108,14 +109,14 @@ public class TestMemStorageEngine {
 	public void testSeriesToDataPointConversion() throws RejectException {
 		List<DataPoint> points = new ArrayList<>();
 		long headerTimestamp = System.currentTimeMillis();
-		TimeSeries timeSeries = new TimeSeries(false, headerTimestamp);
-		timeSeries.addDatapoint(headerTimestamp, 1L);
-		MemStorageEngine.seriesToDataPoints(points, timeSeries, null, null);
+		TimeSeriesBucket timeSeries = new TimeSeriesBucket(headerTimestamp);
+		timeSeries.addDataPoint(headerTimestamp, 1L);
+		TimeSeries.seriesToDataPoints(points, timeSeries, null, null, false);
 		assertEquals(1, points.size());
 		points.clear();
 
 		Predicate timepredicate = new BetweenPredicate(Long.MAX_VALUE, Long.MAX_VALUE);
-		MemStorageEngine.seriesToDataPoints(points, timeSeries, timepredicate, null);
+		TimeSeries.seriesToDataPoints(points, timeSeries, timepredicate, null, false);
 		assertEquals(0, points.size());
 	}
 

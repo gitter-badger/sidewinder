@@ -309,4 +309,10 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public boolean checkIfExists(String dbName, String measurement) throws Exception {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }

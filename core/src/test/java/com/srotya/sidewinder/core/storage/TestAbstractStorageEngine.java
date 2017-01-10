@@ -155,6 +155,12 @@ public class TestAbstractStorageEngine {
 			
 		}
 
+		@Override
+		public boolean checkIfExists(String dbName, String measurement) throws Exception {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
 	}
 
 }

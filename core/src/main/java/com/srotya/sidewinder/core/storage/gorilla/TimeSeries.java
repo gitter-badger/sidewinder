@@ -15,77 +15,128 @@
  */
 package com.srotya.sidewinder.core.storage.gorilla;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SortedMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 
+import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
+import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.RejectException;
+import com.srotya.sidewinder.core.utils.TimeUtils;
 
 /**
- * In-memory representation of a time series based on Gorilla compression. This
- * class wraps the compressed time series byte representation of Gorilla and
- * adds read-write concurrency and thread-safety using re-entrant locks.
+ * A timeseries is defined as a subset of a measurement for a specific set of
+ * tags. Measurement is defined as a category and is an abstract to group
+ * metrics about a given topic under a the same label. E.g of a measurement is
+ * CPU, Memory whereas a {@link TimeSeries} would be cpu measurement on a
+ * specific host.<br>
+ * <br>
+ * Internally a {@link TimeSeries} contains a {@link SortedMap} of buckets that
+ * bundle datapoints under temporally sorted partitions that makes storage,
+ * retrieval and evictions efficient. This class provides the abstractions
+ * around that, therefore partitioning / bucketing interval can be controlled on
+ * a per {@link TimeSeries} basis rather than keep it a constant.<br><br>
  * 
  * @author ambud
  */
-public class TimeSeries implements Serializable {
+public class TimeSeries {
 
-	private static final long serialVersionUID = 1L;
-	private static final RejectException OLD_DATA_POINT = new RejectException("Rejected older datapoint");
+	private static final int TIME_BUCKET_CONSTANT = 4096;
+	private SortedMap<String, TimeSeriesBucket> bucketMap;
 	private boolean fp;
-	private Writer writer;
-	private ByteBufferBitOutput output;
-	private int count;
-	private long lastTs;
 
-	public TimeSeries(boolean fp, long headerTimestamp) {
+	public TimeSeries(boolean fp) {
 		this.fp = fp;
-		this.output = new ByteBufferBitOutput(4096 * 8 * 2);
-		this.writer = new Writer(headerTimestamp, output);
+		bucketMap = new ConcurrentSkipListMap<>();
 	}
 
-	public void addDatapoint(long timestamp, double value) throws RejectException {
-		synchronized (output) {
-			if (timestamp < lastTs) {
-				// drop this datapoint
-				throw OLD_DATA_POINT;
+	public List<DataPoint> queryDataPoints(long startTime, long endTime, Predicate valuePredicate) {
+		List<DataPoint> points = new ArrayList<>();
+		BetweenPredicate timeRangePredicate = new BetweenPredicate(startTime, endTime);
+		int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT)
+				- TIME_BUCKET_CONSTANT;
+		String startTsBucket = Integer.toHexString(tsStartBucket);
+		int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
+		String endTsBucket = Integer.toHexString(tsEndBucket);
+		SortedMap<String, TimeSeriesBucket> series = bucketMap.subMap(startTsBucket, endTsBucket + Character.MAX_VALUE);
+		if (series == null || series.isEmpty()) {
+			TimeSeriesBucket timeSeries = bucketMap.get(startTsBucket);
+			if (timeSeries != null) {
+				seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate, fp);
 			}
-			writer.addValue(timestamp, value);
-			count++;
-			lastTs = timestamp;
-		}
-	}
-
-	public void addDatapoint(long timestamp, long value) throws RejectException {
-		synchronized (output) {
-			if (timestamp < lastTs) {
-				// drop this datapoint
-				throw OLD_DATA_POINT;
+		} else {
+			for (TimeSeriesBucket timeSeries : series.values()) {
+				seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate, fp);
 			}
-			writer.addValue(timestamp, value);
-			count++;
-			lastTs = timestamp;
 		}
+		return points;
 	}
 
-	public Reader getReader(Predicate timePredicate, Predicate valuePredicate) {
-		ByteBuffer buf = null;
-		int countSnapshot;
-		synchronized (output) {
-			buf = output.getByteBuffer().duplicate();
-			countSnapshot = count;
+	public void addDataPoint(TimeUnit unit, long timestamp, long value) throws RejectException {
+		int bucket = TimeUtils.getTimeBucket(unit, timestamp, TIME_BUCKET_CONSTANT);
+		String tsBucket = Integer.toHexString(bucket);
+		TimeSeriesBucket timeseriesBucket = bucketMap.get(tsBucket);
+		if (timeseriesBucket == null) {
+			timeseriesBucket = new TimeSeriesBucket(timestamp);
+			bucketMap.put(tsBucket, timeseriesBucket);
 		}
-		buf.rewind();
-		return new Reader(new ByteBufferBitInput(buf), countSnapshot, timePredicate, valuePredicate);
+		timeseriesBucket.addDataPoint(timestamp, value);
+	}
+
+	public void addDataPoint(TimeUnit unit, long timestamp, double value) throws RejectException {
+		int bucket = TimeUtils.getTimeBucket(unit, timestamp, TIME_BUCKET_CONSTANT);
+		String tsBucket = Integer.toHexString(bucket);
+		TimeSeriesBucket timeseriesBucket = bucketMap.get(tsBucket);
+		if (timeseriesBucket == null) {
+			timeseriesBucket = new TimeSeriesBucket(timestamp);
+			bucketMap.put(tsBucket, timeseriesBucket);
+		}
+		timeseriesBucket.addDataPoint(timestamp, value);
 	}
 
 	/**
-	 * Flush byte to buffer
+	 * Converts timeseries to a list of datapoints appended to the supplied list
+	 * object. Datapoints are filtered by the supplied predicates before they
+	 * are returned. These predicates are pushed down to the reader for
+	 * efficiency and performance as it prevents unnecessary object creation.
+	 * 
+	 * @param points
+	 *            list data points are appended to
+	 * @param timeSeries
+	 *            to extract the data points from
+	 * @param timePredicate
+	 *            time range filter
+	 * @param valuePredicate
+	 *            value filter
+	 * @return the points argument
 	 */
-	public void flush() {
-		synchronized (output) {
-			writer.flush();
+	public static List<DataPoint> seriesToDataPoints(List<DataPoint> points, TimeSeriesBucket timeSeries,
+			Predicate timePredicate, Predicate valuePredicate, boolean isFp) {
+		Reader reader = timeSeries.getReader(timePredicate, valuePredicate);
+		DataPoint point = null;
+		while (true) {
+			try {
+				point = reader.readPair();
+				if (point != null) {
+					point.setFp(isFp);
+					points.add(point);
+				}
+			} catch (IOException e) {
+				break;
+			}
 		}
+		return points;
+	}
+
+	/**
+	 * @return the bucketMap
+	 */
+	public SortedMap<String, TimeSeriesBucket> getBucketMap() {
+		return bucketMap;
 	}
 
 	/**
@@ -95,36 +146,4 @@ public class TimeSeries implements Serializable {
 		return fp;
 	}
 
-	/**
-	 * Not threadsafe
-	 * 
-	 * @return the count
-	 */
-	public int getCount() {
-		return count;
-	}
-
-	/**
-	 * Analytical method used for monitoring compression ratios for a given
-	 * timeseries. Ratio = expected number of bytes / actual number of bytes.
-	 * 
-	 * @return compression ratio
-	 */
-	public double getCompressionRatio() {
-		synchronized (output) {
-			ByteBuffer buf = output.getByteBuffer().duplicate();
-			double expectedSize = count * 8 * 2;
-			return expectedSize / buf.position();
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-		return "TimeSeries [fp=" + fp + ", count=" + count + "]";
-	}
 }

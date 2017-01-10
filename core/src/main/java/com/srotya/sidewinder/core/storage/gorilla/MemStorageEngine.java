@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,21 +30,37 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
-import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.Callback;
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
-import com.srotya.sidewinder.core.utils.TimeUtils;
 
 /**
+ * In-memory Timeseries {@link StorageEngine} implementation that uses the
+ * following hierarchy:
+ * <ul>
+ * <li>Database</li>
+ * <ul>
+ * <li>Measurement</li>
+ * <ul>
+ * <li>Time Series</li>
+ * </ul>
+ * </ul>
+ * </ul>
+ * 
+ * {@link TimeSeriesBucket} is uses compressed in-memory representation of the
+ * actual data. Periodic checks against size ensure that Sidewinder server
+ * doesn't run out of memory. Each timeseries has a <br>
+ * <br>
+ * 
+ * 
+ * 
  * @author ambud
  */
 public class MemStorageEngine implements StorageEngine {
 
-	private static final int TIME_BUCKET_CONSTANT = 4096;
 	private static final Logger logger = Logger.getLogger(MemStorageEngine.class.getName());
 	private static RejectException INVALID_DATAPOINT_EXCEPTION = new RejectException();
 	private Map<String, SortedMap<String, SortedMap<String, TimeSeries>>> databaseMap;
@@ -71,64 +88,14 @@ public class MemStorageEngine implements StorageEngine {
 		if (measurementMap != null) {
 			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
 			if (seriesMap != null) {
-				BetweenPredicate timeRangePredicate = new BetweenPredicate(startTime, endTime);
-				int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT) - TIME_BUCKET_CONSTANT;
-				String startTsBucket = Integer.toHexString(tsStartBucket);
-				int tsEndBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, endTime, TIME_BUCKET_CONSTANT);
-				String endTsBucket = Integer.toHexString(tsEndBucket);
-				SortedMap<String, TimeSeries> series = seriesMap.subMap(startTsBucket,
-						endTsBucket + Character.MAX_VALUE);
-				if (series == null || series.isEmpty()) {
-					TimeSeries timeSeries = seriesMap.get(startTsBucket);
-					if (timeSeries != null) {
-						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
-					}
-				} else {
-					for (TimeSeries timeSeries : series.values()) {
-						seriesToDataPoints(points, timeSeries, timeRangePredicate, valuePredicate);
-					}
+				for (Entry<String, TimeSeries> entry : seriesMap.entrySet()) {
+					points.addAll(entry.getValue().queryDataPoints(startTime, endTime, valuePredicate));
 				}
-				// System.out.println("Count of points:" +
-				// timeSeries.getCount() + "\t" + points.size());
 			} else {
-				throw new ItemNotFoundException("Measurement "+measurementName+" not found");
+				throw new ItemNotFoundException("Measurement " + measurementName + " not found");
 			}
 		} else {
-			throw new ItemNotFoundException("Database "+dbName+" not found");
-		}
-		return points;
-	}
-
-	/**
-	 * Converts timeseries to a list of datapoints appended to the supplied list
-	 * object. Datapoints are filtered by the supplied predicates before they
-	 * are returned. These predicates are pushed down to the reader for
-	 * efficiency and performance as it prevents unnecessary object creation.
-	 * 
-	 * @param points
-	 *            list data points are appended to
-	 * @param timeSeries
-	 *            to extract the data points from
-	 * @param timePredicate
-	 *            time range filter
-	 * @param valuePredicate
-	 *            value filter
-	 * @return the points argument
-	 */
-	public static List<DataPoint> seriesToDataPoints(List<DataPoint> points, TimeSeries timeSeries,
-			Predicate timePredicate, Predicate valuePredicate) {
-		Reader reader = timeSeries.getReader(timePredicate, valuePredicate);
-		DataPoint point = null;
-		while (true) {
-			try {
-				point = reader.readPair();
-				if (point != null) {
-					point.setFp(timeSeries.isFp());
-					points.add(point);
-				}
-			} catch (IOException e) {
-				break;
-			}
+			throw new ItemNotFoundException("Database " + dbName + " not found");
 		}
 		return points;
 	}
@@ -159,9 +126,9 @@ public class MemStorageEngine implements StorageEngine {
 			throw INVALID_DATAPOINT_EXCEPTION;
 		}
 		if (dp.isFp()) {
-			timeSeries.addDatapoint(dp.getTimestamp(), dp.getValue());
+			timeSeries.addDataPoint(TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.getValue());
 		} else {
-			timeSeries.addDatapoint(dp.getTimestamp(), dp.getLongValue());
+			timeSeries.addDataPoint(TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.getLongValue());
 		}
 		counter.incrementAndGet();
 	}
@@ -170,18 +137,13 @@ public class MemStorageEngine implements StorageEngine {
 	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
 			long value, Callback callback) throws IOException {
 		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, tags, unit, timestamp, false);
-		timeSeries.addDatapoint(timestamp, value);
+		timeSeries.addDataPoint(unit, timestamp, value);
 		counter.incrementAndGet();
 	}
 
 	protected TimeSeries getOrCreateTimeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit,
 			long timestamp, boolean fp) {
-		int bucket = TimeUtils.getTimeBucket(unit, timestamp, TIME_BUCKET_CONSTANT);
-		String tsBucket = Integer.toHexString(bucket);
-		// StringBuilder builder = new StringBuilder(measurementName.length() +
-		// 1 + tsBucket.length());
-		// builder.append(tsBucket);
-		String rowKey = tsBucket;// builder.toString();
+		String rowKey = "default";// builder.toString(); // replace with tags
 
 		// check and create database map
 		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
@@ -202,7 +164,7 @@ public class MemStorageEngine implements StorageEngine {
 		// check and create timeseries
 		TimeSeries timeSeries = seriesMap.get(rowKey);
 		if (timeSeries == null) {
-			timeSeries = new TimeSeries(fp, timestamp);
+			timeSeries = new TimeSeries(fp);
 			seriesMap.put(rowKey, timeSeries);
 			logger.fine("Created new timeseries:" + timeSeries + " for measurement:" + measurementName + "\t" + rowKey);
 		}
@@ -213,7 +175,7 @@ public class MemStorageEngine implements StorageEngine {
 	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
 			double value, Callback callback) throws IOException {
 		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, tags, unit, timestamp, true);
-		timeSeries.addDatapoint(timestamp, value);
+		timeSeries.addDataPoint(unit, timestamp, value);
 		counter.incrementAndGet();
 	}
 
@@ -247,6 +209,7 @@ public class MemStorageEngine implements StorageEngine {
 	public void dropMeasurement(String dbName, String measurementName) throws Exception {
 		databaseMap.get(dbName).remove(measurementName);
 	}
+
 	/**
 	 * Function for unit testing
 	 * 
@@ -264,6 +227,15 @@ public class MemStorageEngine implements StorageEngine {
 
 	@Override
 	public void disconnect() throws IOException {
+	}
+
+	@Override
+	public boolean checkIfExists(String dbName, String measurement) throws Exception {
+		if (checkIfExists(dbName)) {
+			return databaseMap.get(dbName).containsKey(measurement);
+		} else {
+			return false;
+		}
 	}
 
 }
