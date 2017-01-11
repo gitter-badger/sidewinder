@@ -39,7 +39,8 @@ import com.srotya.sidewinder.core.utils.TimeUtils;
  * bundle datapoints under temporally sorted partitions that makes storage,
  * retrieval and evictions efficient. This class provides the abstractions
  * around that, therefore partitioning / bucketing interval can be controlled on
- * a per {@link TimeSeries} basis rather than keep it a constant.<br><br>
+ * a per {@link TimeSeries} basis rather than keep it a constant.<br>
+ * <br>
  * 
  * @author ambud
  */
@@ -55,6 +56,12 @@ public class TimeSeries {
 	}
 
 	public List<DataPoint> queryDataPoints(long startTime, long endTime, Predicate valuePredicate) {
+		if (startTime > endTime) {
+			// swap start and end times if they are off
+			startTime = startTime ^ endTime;
+			endTime = endTime ^ startTime;
+			startTime = startTime ^ endTime;
+		}
 		List<DataPoint> points = new ArrayList<>();
 		BetweenPredicate timeRangePredicate = new BetweenPredicate(startTime, endTime);
 		int tsStartBucket = TimeUtils.getTimeBucket(TimeUnit.MILLISECONDS, startTime, TIME_BUCKET_CONSTANT)

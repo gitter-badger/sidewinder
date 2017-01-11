@@ -25,6 +25,7 @@ public class DataPoint implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private boolean isFp;
+	private String dbName;
 	private String measurementName;
 	private List<String> tags;
 	private long timestamp;
@@ -35,14 +36,16 @@ public class DataPoint implements Serializable {
 		this.value = value;
 	}
 
-	public DataPoint(String measurementName, List<String> tags, long timestamp, long value) {
+	public DataPoint(String dbName, String measurementName, List<String> tags, long timestamp, long value) {
+		this.dbName = dbName;
 		this.measurementName = measurementName;
 		this.tags = tags;
 		this.timestamp = timestamp;
 		this.value = value;
 	}
 
-	public DataPoint(String seriesName, List<String> tags, long timestamp, double value) {
+	public DataPoint(String dbName, String seriesName, List<String> tags, long timestamp, double value) {
+		this.dbName = dbName;
 		this.measurementName = seriesName;
 		this.tags = tags;
 		this.timestamp = timestamp;
@@ -131,6 +134,21 @@ public class DataPoint implements Serializable {
 		this.tags = tags;
 	}
 
+	/**
+	 * @return the dbName
+	 */
+	public String getDbName() {
+		return dbName;
+	}
+
+	/**
+	 * @param dbName
+	 *            the dbName to set
+	 */
+	public void setDbName(String dbName) {
+		this.dbName = dbName;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -139,9 +157,11 @@ public class DataPoint implements Serializable {
 	@Override
 	public String toString() {
 		if (isFp) {
-			return "DataPoint [measurementName=" + measurementName + ", timestamp=" + timestamp + ", value=" + getValue() + "]";
+			return "DataPoint [measurementName=" + measurementName + ", timestamp=" + timestamp + ", value="
+					+ getValue() + "]";
 		} else {
-			return "DataPoint [measurementName=" + measurementName + ", timestamp=" + timestamp + ", value=" + getLongValue() + "]";
+			return "DataPoint [measurementName=" + measurementName + ", timestamp=" + timestamp + ", value="
+					+ getLongValue() + "]";
 		}
 	}
 

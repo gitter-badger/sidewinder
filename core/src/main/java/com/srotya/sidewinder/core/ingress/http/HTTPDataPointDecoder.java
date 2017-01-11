@@ -115,7 +115,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 				} else {
 					String payload = byteBuf.toString(CharsetUtil.UTF_8);
 					logger.fine("Request:"+payload);
-					List<DataPoint> dps = dataPointsFromString(payload);
+					List<DataPoint> dps = dataPointsFromString(dbName, payload);
 					for (DataPoint dp : dps) {
 						try {
 							engine.writeDataPoint(dbName, dp);
@@ -145,7 +145,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 		ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
 	}
 
-	public static List<DataPoint> dataPointsFromString(String payload) {
+	public static List<DataPoint> dataPointsFromString(String dbName, String payload) {
 		List<DataPoint> dps = new ArrayList<>();
 		String[] splits = payload.split("[\\r\\n]+");
 		for (String split : splits) {
@@ -171,7 +171,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 					String prefix = fv[0];
 					if (fv[1].contains(".")) {
 						double value = Double.parseDouble(fv[1]);
-						DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
+						DataPoint dp = new DataPoint(dbName, seriesName + "-" + prefix, tags, timestamp, value);
 						dp.setFp(true);
 						dps.add(dp);
 					} else {
@@ -179,7 +179,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 							fv[1] = fv[1].substring(0, fv[1].length() - 1);
 						}
 						long value = Long.parseLong(fv[1]);
-						DataPoint dp = new DataPoint(seriesName + "-" + prefix, tags, timestamp, value);
+						DataPoint dp = new DataPoint(dbName, seriesName + "-" + prefix, tags, timestamp, value);
 						dp.setFp(false);
 						dps.add(dp);
 					}

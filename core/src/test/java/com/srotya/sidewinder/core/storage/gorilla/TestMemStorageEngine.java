@@ -54,7 +54,7 @@ public class TestMemStorageEngine {
 	public void testConfigure() {
 		StorageEngine engine = new MemStorageEngine();
 		try {
-			engine.writeDataPoint("test", new DataPoint("ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
+			engine.writeDataPoint("test", new DataPoint("test", "ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
 			fail("Engine not initialized, shouldn't be able to write a datapoint");
 		} catch (Exception e) {
 		}
@@ -65,7 +65,7 @@ public class TestMemStorageEngine {
 			fail("No IOException should be thrown");
 		}
 		try {
-			engine.writeDataPoint("test", new DataPoint("ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
+			engine.writeDataPoint("test", new DataPoint("test", "ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail("Engine is initialized, no IO Exception should be thrown:"+e.getMessage());

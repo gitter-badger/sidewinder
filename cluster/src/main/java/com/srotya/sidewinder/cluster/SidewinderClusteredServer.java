@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 Ambud Sharma
+ * Copyright 2017 Ambud Sharma
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,33 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core;
+package com.srotya.sidewinder.cluster;
 
+import java.io.IOException;
 import java.util.HashMap;
 
+import com.srotya.sidewinder.cluster.storage.ClusteredMemStorageEngine;
 import com.srotya.sidewinder.core.api.DatabaseOpsApi;
 import com.srotya.sidewinder.core.api.GrafanaQueryApi;
 import com.srotya.sidewinder.core.api.MeasurementOpsApi;
 import com.srotya.sidewinder.core.ingress.http.NettyHTTPIngestionServer;
 import com.srotya.sidewinder.core.storage.StorageEngine;
-import com.srotya.sidewinder.core.storage.gorilla.MemStorageEngine;
 
 import io.dropwizard.Application;
 import io.dropwizard.setup.Environment;
 
 /**
  * @author ambud
- *
  */
-public class SidewinderServer extends Application<SidewinderConfig> {
+public class SidewinderClusteredServer extends Application<SidewinderConfig> {
 
 	private StorageEngine storageEngine;
-	private static SidewinderServer sidewinderServer;
+	private static SidewinderClusteredServer sidewinderServer;
 
 	@Override
 	public void run(SidewinderConfig config, Environment env) throws Exception {
-		storageEngine = new MemStorageEngine();
+		storageEngine = new ClusteredMemStorageEngine();
 		storageEngine.configure(new HashMap<>());
+		storageEngine.connect();
+		
+		Runtime.getRuntime().addShutdownHook(new Thread(){
+			@Override
+			public void run() {
+				try {
+					storageEngine.disconnect();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		});
+		
 		env.jersey().register(new GrafanaQueryApi(storageEngine));
 		env.jersey().register(new MeasurementOpsApi(storageEngine));
 		env.jersey().register(new DatabaseOpsApi(storageEngine));
@@ -55,14 +69,14 @@ public class SidewinderServer extends Application<SidewinderConfig> {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		sidewinderServer = new SidewinderServer();
+		sidewinderServer = new SidewinderClusteredServer();
 		sidewinderServer.run(args);
 	}
 
 	/**
 	 * @return
 	 */
-	public static SidewinderServer getSidewinderServer() {
+	public static SidewinderClusteredServer getSidewinderServer() {
 		return sidewinderServer;
 	}
 

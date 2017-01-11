@@ -32,6 +32,10 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldPrepender;
 
+/**
+ * @author ambud
+ *
+ */
 public class NettyIngestionClient {
 
 	private static final int TOTAL = 1000000;
@@ -56,7 +60,7 @@ public class NettyIngestionClient {
 			for (int k = 0; k < TOTAL; k++) {
 				List<DataPoint> data = new ArrayList<>();
 				for (int i = 0; i < 100; i++) {
-					DataPoint dp = new DataPoint("test" + i, null, System.currentTimeMillis() + i * k,
+					DataPoint dp = new DataPoint("test", "cpu" + i, null, System.currentTimeMillis() + i * k,
 							System.currentTimeMillis() + i * k);
 					dp.setFp(false);
 					data.add(dp);

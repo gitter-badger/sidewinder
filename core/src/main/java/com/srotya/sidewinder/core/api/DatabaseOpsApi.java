@@ -31,7 +31,7 @@ import javax.ws.rs.core.MediaType;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 import com.srotya.sidewinder.core.utils.SecurityUtils;
 
-@Path("/databases")
+@Path("/database")
 public class DatabaseOpsApi {
 
 	public static final String DB_NAME = "dbName";
@@ -59,13 +59,13 @@ public class DatabaseOpsApi {
 
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
-	public Set<String> listSeries(@PathParam(DB_NAME) String dbName) {
+	public Set<String> listMeasurements(@PathParam(DB_NAME) String dbName) {
 		try {
-			Set<String> series = storageEngine.getAllMeasurementsForDb(dbName);
-			if (series.size() == 0) {
+			Set<String> measurements = storageEngine.getAllMeasurementsForDb(dbName);
+			if (measurements.size() == 0) {
 				throw new NotFoundException("No such database:" + dbName);
 			} else {
-				return series;
+				return measurements;
 			}
 		} catch (NotFoundException e) {
 			throw e;

@@ -77,12 +77,6 @@ public class MemStorageEngine implements StorageEngine {
 	@Override
 	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
 			List<String> tags, Predicate valuePredicate) throws ItemNotFoundException {
-		if (startTime > endTime) {
-			// swap start and end times if they are off
-			startTime = startTime ^ endTime;
-			endTime = endTime ^ startTime;
-			startTime = startTime ^ endTime;
-		}
 		List<DataPoint> points = new ArrayList<>();
 		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
 		if (measurementMap != null) {

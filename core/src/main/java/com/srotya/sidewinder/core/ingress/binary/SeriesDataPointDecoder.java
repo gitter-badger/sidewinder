@@ -43,23 +43,30 @@ public class SeriesDataPointDecoder extends ReplayingDecoder<Void> {
 	}
 
 	public static DataPoint decodeBufToDPoint(ByteBuf buf) {
-		int seriesNameLength = buf.readInt();
-		if(seriesNameLength<0) {
+		int dbNameLength = buf.readInt();
+		if (dbNameLength < 0) {
 			return null;
 		}
-		byte[] b = new byte[seriesNameLength];
-		buf.readBytes(b);
-		String seriesName = new String(b);
+		byte[] dbBytes = new byte[dbNameLength];
+		buf.readBytes(dbBytes);
+		String dbName = new String(dbBytes);
+		int seriesNameLength = buf.readInt();
+		if (seriesNameLength < 0) {
+			return null;
+		}
+		byte[] measurementNameBytes = new byte[seriesNameLength];
+		buf.readBytes(measurementNameBytes);
+		String seriesName = new String(measurementNameBytes);
 		long timestamp = buf.readLong();
 		byte flag = buf.readByte();
 		DataPoint dp;
 		if (flag == '0') {
 			double value = buf.readDouble();
-			dp = new DataPoint(seriesName, null, timestamp, value);
+			dp = new DataPoint(dbName, seriesName, null, timestamp, value);
 			dp.setFp(true);
 		} else {
 			long value = buf.readLong();
-			dp = new DataPoint(seriesName, null, timestamp, value);
+			dp = new DataPoint(dbName, seriesName, null, timestamp, value);
 		}
 		return dp;
 	}
