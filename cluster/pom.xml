@@ -12,7 +12,7 @@
 	<name>sidewinder-cluster</name>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<linea.version>0.0.16-SNAPSHOT</linea.version>
+		<linea.version>0.0.15</linea.version>
 	</properties>
 	<dependencies>
 		<dependency>
