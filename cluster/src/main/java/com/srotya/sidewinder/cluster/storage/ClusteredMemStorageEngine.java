@@ -75,13 +75,16 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 	@Override
 	public void configure(Map<String, String> conf) throws IOException {
 		this.local = new MemStorageEngine();
+		this.local.configure(conf);
 		this.clusterSize = Integer.parseInt(conf.getOrDefault("cluster.size", "1"));
-		conf.put(Topology.WORKER_DATA_PORT, "9928");
+		conf.put(Topology.WORKER_DATA_PORT, "9927");
+		conf.put("linea.zk.root", "/sidewinder");
 		this.columbus = new Columbus(conf);
 	}
 
 	@Override
 	public void connect() throws IOException {
+		this.local.connect();
 		Executors.newSingleThreadExecutor().submit(columbus);
 		while (columbus.getWorkerCount() < clusterSize) {
 			try {
@@ -93,10 +96,14 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 		}
 		this.clients = new HashMap<>();
 		for (Entry<Integer, WorkerEntry> entry : columbus.getWorkerMap().entrySet()) {
-			TCPClient client = new TCPClient(entry.getValue());
-			clients.put(entry.getKey(), client);
-			client.connect();
+			if (entry.getKey() != columbus.getSelfWorkerId()) {
+				TCPClient client = new TCPClient(entry.getValue());
+				clients.put(entry.getKey(), client);
+				client.connect();
+				logger.info("Connected to " + entry.getValue().getWorkerAddress());
+			}
 		}
+		logger.info("All worker connections initialized");
 	}
 
 	@Override

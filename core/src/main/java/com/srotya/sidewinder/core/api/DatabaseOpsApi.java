@@ -57,6 +57,7 @@ public class DatabaseOpsApi {
 		}
 	}
 
+	@Path("/{" + DB_NAME + "}")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
 	public Set<String> listMeasurements(@PathParam(DB_NAME) String dbName) {
@@ -77,10 +78,12 @@ public class DatabaseOpsApi {
 	@Path("/{" + DB_NAME + "}/check")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
-	public void checkIfExists(@PathParam(DB_NAME) String dbName) {
+	public String checkIfExists(@PathParam(DB_NAME) String dbName) {
 		try {
 			if (!storageEngine.checkIfExists(dbName)) {
 				throw new NotFoundException("Database:" + dbName + " not found");
+			} else {
+				return "true";
 			}
 		} catch (NotFoundException e) {
 			throw e;

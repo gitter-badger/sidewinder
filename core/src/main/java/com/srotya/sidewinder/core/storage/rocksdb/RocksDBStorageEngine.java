@@ -46,9 +46,6 @@ import com.srotya.sidewinder.core.predicates.Predicate;
 import com.srotya.sidewinder.core.storage.AbstractStorageEngine;
 import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.WriteTask;
-import com.srotya.sidewinder.core.utils.ByteUtils;
-
-import io.symcpe.wraith.MurmurHash;
 
 /**
  * @author ambudsharma
@@ -174,7 +171,7 @@ public class RocksDBStorageEngine extends AbstractStorageEngine {
 			byte[] key = identifier.getBytes(CHARSET);
 			byte[] val = indexdb.get(key);
 			if (val == null) {
-				val = ByteUtils.intToByteMSBTruncated(MurmurHash.hash32(identifier));
+//				val = ByteUtils.intToByteMSBTruncated((identifier));
 				indexdb.put(key, val);
 			}
 			return val;

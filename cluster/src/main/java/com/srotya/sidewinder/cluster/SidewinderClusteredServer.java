@@ -22,6 +22,7 @@ import com.srotya.sidewinder.cluster.storage.ClusteredMemStorageEngine;
 import com.srotya.sidewinder.core.api.DatabaseOpsApi;
 import com.srotya.sidewinder.core.api.GrafanaQueryApi;
 import com.srotya.sidewinder.core.api.MeasurementOpsApi;
+import com.srotya.sidewinder.core.ingress.binary.NettyBinaryIngestionServer;
 import com.srotya.sidewinder.core.ingress.http.NettyHTTPIngestionServer;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
@@ -39,6 +40,14 @@ public class SidewinderClusteredServer extends Application<SidewinderConfig> {
 	@Override
 	public void run(SidewinderConfig config, Environment env) throws Exception {
 		storageEngine = new ClusteredMemStorageEngine();
+		NettyHTTPIngestionServer server = new NettyHTTPIngestionServer();
+		server.init(storageEngine, new HashMap<>());
+		server.start();
+		
+		NettyBinaryIngestionServer binServer = new NettyBinaryIngestionServer();
+		binServer.init(storageEngine, new HashMap<>());
+		binServer.start();
+		
 		storageEngine.configure(new HashMap<>());
 		storageEngine.connect();
 		
@@ -57,9 +66,6 @@ public class SidewinderClusteredServer extends Application<SidewinderConfig> {
 		env.jersey().register(new GrafanaQueryApi(storageEngine));
 		env.jersey().register(new MeasurementOpsApi(storageEngine));
 		env.jersey().register(new DatabaseOpsApi(storageEngine));
-		NettyHTTPIngestionServer server = new NettyHTTPIngestionServer();
-		server.init(storageEngine, new HashMap<>());
-		server.start();
 	}
 
 	/**
