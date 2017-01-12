@@ -17,6 +17,8 @@ package com.srotya.sidewinder.core.sql.operators;
 
 import java.util.List;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * @author ambud
  */
@@ -32,7 +34,7 @@ public class OrOperator extends ComplexOperator {
 	}
 
 	@Override
-	public boolean operator(boolean prev, Operator next, Object value) {
+	public boolean operator(boolean prev, Operator next, DataPoint value) {
 		return prev || next.operate(value);
 	}
 

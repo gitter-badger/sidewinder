@@ -15,6 +15,8 @@
  */
 package com.srotya.sidewinder.core.sql.operators;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * @author ambud
  */
@@ -24,8 +26,10 @@ public class BetweenOperator implements Operator {
 	private Number lowerBound;
 	private boolean isFloat;
 	private boolean isInclusive;
+	private String column;
 
-	public BetweenOperator(boolean isFloat, boolean isInclusive, Number lowerBound, Number upperBound) {
+	public BetweenOperator(String column, boolean isFloat, boolean isInclusive, Number lowerBound, Number upperBound) {
+		this.column = column;
 		this.isFloat = isFloat;
 		this.isInclusive = isInclusive;
 		this.lowerBound = lowerBound;
@@ -33,8 +37,17 @@ public class BetweenOperator implements Operator {
 	}
 
 	@Override
-	public boolean operate(Object val) {
-		Number value = (Number) val;
+	public boolean operate(DataPoint val) {
+		Number value = null;
+		if (column.equals("timestamp")) {
+			value = (Number) val.getTimestamp();
+		} else {
+			if (isFloat) {
+				value = (Number) val.getValue();
+			} else {
+				value = (Number) val.getLongValue();
+			}
+		}
 		if (isInclusive) {
 			if (isFloat) {
 				return lowerBound.doubleValue() <= value.doubleValue()
@@ -59,7 +72,8 @@ public class BetweenOperator implements Operator {
 	}
 
 	/**
-	 * @param upperBound the upperBound to set
+	 * @param upperBound
+	 *            the upperBound to set
 	 */
 	public void setUpperBound(Number upperBound) {
 		this.upperBound = upperBound;
@@ -73,7 +87,8 @@ public class BetweenOperator implements Operator {
 	}
 
 	/**
-	 * @param lowerBound the lowerBound to set
+	 * @param lowerBound
+	 *            the lowerBound to set
 	 */
 	public void setLowerBound(Number lowerBound) {
 		this.lowerBound = lowerBound;
@@ -87,7 +102,8 @@ public class BetweenOperator implements Operator {
 	}
 
 	/**
-	 * @param isFloat the isFloat to set
+	 * @param isFloat
+	 *            the isFloat to set
 	 */
 	public void setFloat(boolean isFloat) {
 		this.isFloat = isFloat;
@@ -101,7 +117,8 @@ public class BetweenOperator implements Operator {
 	}
 
 	/**
-	 * @param isInclusive the isInclusive to set
+	 * @param isInclusive
+	 *            the isInclusive to set
 	 */
 	public void setInclusive(boolean isInclusive) {
 		this.isInclusive = isInclusive;

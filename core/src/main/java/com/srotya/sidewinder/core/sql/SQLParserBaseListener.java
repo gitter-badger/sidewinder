@@ -1,6 +1,9 @@
 package com.srotya.sidewinder.core.sql;
 
+import java.util.Arrays;
 import java.util.Stack;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // Generated from SQLParser.g4 by ANTLR 4.6
 
@@ -13,6 +16,7 @@ import com.srotya.sidewinder.core.sql.operators.ComplexOperator;
 import com.srotya.sidewinder.core.sql.operators.Equals;
 import com.srotya.sidewinder.core.sql.operators.GreaterThan;
 import com.srotya.sidewinder.core.sql.operators.GreaterThanEquals;
+import com.srotya.sidewinder.core.sql.operators.InOperator;
 import com.srotya.sidewinder.core.sql.operators.LessThan;
 import com.srotya.sidewinder.core.sql.operators.LessThanEquals;
 import com.srotya.sidewinder.core.sql.operators.NotEquals;
@@ -26,6 +30,7 @@ import com.srotya.sidewinder.core.sql.operators.OrOperator;
  */
 public class SQLParserBaseListener implements SQLParserListener {
 
+	private Pattern dateDiff = Pattern.compile("datediff\\(timestamp,now\\(\\)\\)");
 	private Stack<Operator> stacks;
 	private Operator filterTree;
 	private String measurementName;
@@ -56,7 +61,14 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterSql(SQLParser.SqlContext ctx) {
+	public void enterIn_value_list(SQLParser.In_value_listContext ctx) {
+		System.out.println("In operator:" + ctx.getText());
+		String[] splits = ctx.getText().split(",");
+		Operator op = new InOperator(Arrays.asList(splits));
+		if (!stacks.isEmpty()) {
+			ComplexOperator peek = (ComplexOperator) stacks.peek();
+			peek.addOperator(op);
+		}
 	}
 
 	/**
@@ -67,7 +79,7 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void exitSql(SQLParser.SqlContext ctx) {
+	public void exitIn_value_list(SQLParser.In_value_listContext ctx) {
 	}
 
 	/**
@@ -78,7 +90,7 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterStatement(SQLParser.StatementContext ctx) {
+	public void enterComparison_predicate(SQLParser.Comparison_predicateContext ctx) {
 	}
 
 	/**
@@ -89,7 +101,60 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void exitStatement(SQLParser.StatementContext ctx) {
+	public void exitComparison_predicate(SQLParser.Comparison_predicateContext ctx) {
+		Operator op = null;
+		String lhs = ctx.left.getText();
+		String rhs = ctx.right.getText();
+		if (lhs.matches(".*\\(.*\\)")) {
+			// parse function
+			Matcher matcher = dateDiff.matcher(lhs);
+			if (matcher.matches()) {
+				System.out.println("Found a function expression");
+				long now = System.currentTimeMillis();
+				char cUnit = rhs.charAt(rhs.length() - 1);
+				if (cUnit > 'a' && cUnit < 'z') {
+					rhs = rhs.substring(0, rhs.length() - 1);
+				}
+				long timeOffset = Long.parseLong(rhs);
+				switch (cUnit) {
+				case 'h':
+					timeOffset = timeOffset * 1000 * 3600;
+					break;
+				case 'm':
+					timeOffset = timeOffset * 1000 * 60;
+					break;
+				case 's':
+					timeOffset = timeOffset * 1000;
+					break;
+				case 'd':
+					timeOffset = timeOffset * 1000 * 3600 * 24;
+					break;
+				default:
+					timeOffset = timeOffset * 1000 * 3600;
+				}
+				lhs = "timestamp";
+				rhs = String.valueOf(now - timeOffset);
+				op = new GreaterThan("timestamp", false, Long.parseLong(rhs));
+			}
+		} else {
+			if (ctx.comp_op().EQUAL() != null) {
+				op = new Equals(lhs, rhs);
+			} else if (ctx.comp_op().NOT_EQUAL() != null) {
+				op = new NotEquals(lhs, rhs);
+			} else if (ctx.comp_op().LEQ() != null) {
+				op = new LessThanEquals(lhs, true, Double.parseDouble(rhs));
+			} else if (ctx.comp_op().GEQ() != null) {
+				op = new GreaterThanEquals(lhs, true, Double.parseDouble(rhs));
+			} else if (ctx.comp_op().LTH() != null) {
+				op = new LessThan(lhs, true, Double.parseDouble(rhs));
+			} else if (ctx.comp_op().GTH() != null) {
+				op = new GreaterThan(lhs, true, Double.parseDouble(rhs));
+			}
+		}
+		if (!stacks.isEmpty()) {
+			ComplexOperator peek = (ComplexOperator) stacks.peek();
+			peek.addOperator(op);
+		}
 	}
 
 	/**
@@ -100,7 +165,8 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterData_statement(SQLParser.Data_statementContext ctx) {
+	public void enterOr_predicate(SQLParser.Or_predicateContext ctx) {
+		stacks.push(new OrOperator(null));
 	}
 
 	/**
@@ -111,7 +177,14 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void exitData_statement(SQLParser.Data_statementContext ctx) {
+	public void exitOr_predicate(SQLParser.Or_predicateContext ctx) {
+		OrOperator or = (OrOperator) stacks.pop();
+		if (stacks.isEmpty()) {
+			stacks.push(or);
+		} else {
+			ComplexOperator peek = (ComplexOperator) stacks.peek();
+			peek.addOperator(or);
+		}
 	}
 
 	/**
@@ -122,7 +195,8 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterData_change_statement(SQLParser.Data_change_statementContext ctx) {
+	public void enterAnd_predicate(SQLParser.And_predicateContext ctx) {
+		stacks.push(new AndOperator(null));
 	}
 
 	/**
@@ -133,7 +207,14 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void exitData_change_statement(SQLParser.Data_change_statementContext ctx) {
+	public void exitAnd_predicate(SQLParser.And_predicateContext ctx) {
+		AndOperator and = (AndOperator) stacks.pop();
+		if (stacks.isEmpty()) {
+			stacks.push(and);
+		} else {
+			ComplexOperator peek = (ComplexOperator) stacks.peek();
+			peek.addOperator(and);
+		}
 	}
 
 	/**
@@ -144,7 +225,8 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterSchema_statement(SQLParser.Schema_statementContext ctx) {
+	public void enterWhere_clause(SQLParser.Where_clauseContext ctx) {
+		stacks = new Stack<>();
 	}
 
 	/**
@@ -155,7 +237,8 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void exitSchema_statement(SQLParser.Schema_statementContext ctx) {
+	public void exitWhere_clause(SQLParser.Where_clauseContext ctx) {
+		filterTree = stacks.pop();
 	}
 
 	/**
@@ -166,7 +249,8 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterIndex_statement(SQLParser.Index_statementContext ctx) {
+	public void enterFunction_name(SQLParser.Function_nameContext ctx) {
+//		System.out.println("Function name:" + ctx.getText());
 	}
 
 	/**
@@ -177,469 +261,7 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void exitIndex_statement(SQLParser.Index_statementContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterCreate_table_statement(SQLParser.Create_table_statementContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitCreate_table_statement(SQLParser.Create_table_statementContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterTable_elements(SQLParser.Table_elementsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitTable_elements(SQLParser.Table_elementsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterField_element(SQLParser.Field_elementContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitField_element(SQLParser.Field_elementContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterField_type(SQLParser.Field_typeContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitField_type(SQLParser.Field_typeContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterParam_clause(SQLParser.Param_clauseContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitParam_clause(SQLParser.Param_clauseContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterParam(SQLParser.ParamContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitParam(SQLParser.ParamContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterMethod_specifier(SQLParser.Method_specifierContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitMethod_specifier(SQLParser.Method_specifierContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterTable_space_specifier(SQLParser.Table_space_specifierContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitTable_space_specifier(SQLParser.Table_space_specifierContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterTable_space_name(SQLParser.Table_space_nameContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitTable_space_name(SQLParser.Table_space_nameContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterTable_partitioning_clauses(SQLParser.Table_partitioning_clausesContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitTable_partitioning_clauses(SQLParser.Table_partitioning_clausesContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterRange_partitions(SQLParser.Range_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitRange_partitions(SQLParser.Range_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterRange_value_clause_list(SQLParser.Range_value_clause_listContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitRange_value_clause_list(SQLParser.Range_value_clause_listContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterRange_value_clause(SQLParser.Range_value_clauseContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitRange_value_clause(SQLParser.Range_value_clauseContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterHash_partitions(SQLParser.Hash_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitHash_partitions(SQLParser.Hash_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterIndividual_hash_partitions(SQLParser.Individual_hash_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitIndividual_hash_partitions(SQLParser.Individual_hash_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterIndividual_hash_partition(SQLParser.Individual_hash_partitionContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitIndividual_hash_partition(SQLParser.Individual_hash_partitionContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterHash_partitions_by_quantity(SQLParser.Hash_partitions_by_quantityContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitHash_partitions_by_quantity(SQLParser.Hash_partitions_by_quantityContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterList_partitions(SQLParser.List_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitList_partitions(SQLParser.List_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterList_value_clause_list(SQLParser.List_value_clause_listContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitList_value_clause_list(SQLParser.List_value_clause_listContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterList_value_partition(SQLParser.List_value_partitionContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitList_value_partition(SQLParser.List_value_partitionContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterColumn_partitions(SQLParser.Column_partitionsContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitColumn_partitions(SQLParser.Column_partitionsContext ctx) {
+	public void exitFunction_name(SQLParser.Function_nameContext ctx) {
 	}
 
 	/**
@@ -2236,68 +1858,6 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterOr_predicate(SQLParser.Or_predicateContext ctx) {
-		stacks.push(new OrOperator(null));
-		System.out.println("Enter or condition");
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitOr_predicate(SQLParser.Or_predicateContext ctx) {
-		OrOperator or = (OrOperator) stacks.pop();
-		if (stacks.isEmpty()) {
-			stacks.push(or);
-		} else {
-			ComplexOperator peek = (ComplexOperator) stacks.peek();
-			peek.addOperator(or);
-		}
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterAnd_predicate(SQLParser.And_predicateContext ctx) {
-		stacks.push(new AndOperator(null));
-		System.out.println("Entering And condition:" + ctx.getText());
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitAnd_predicate(SQLParser.And_predicateContext ctx) {
-		AndOperator and = (AndOperator) stacks.pop();
-		if (stacks.isEmpty()) {
-			stacks.push(and);
-		} else {
-			ComplexOperator peek = (ComplexOperator) stacks.peek();
-			peek.addOperator(and);
-		}
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
 	public void enterBoolean_factor(SQLParser.Boolean_factorContext ctx) {
 	}
 
@@ -2973,30 +2533,6 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 */
 	@Override
 	public void exitDerived_table(SQLParser.Derived_tableContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterWhere_clause(SQLParser.Where_clauseContext ctx) {
-		stacks = new Stack<>();
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitWhere_clause(SQLParser.Where_clauseContext ctx) {
-		filterTree = stacks.pop();
 	}
 
 	/**
@@ -3799,48 +3335,6 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterComparison_predicate(SQLParser.Comparison_predicateContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitComparison_predicate(SQLParser.Comparison_predicateContext ctx) {
-		Operator op = null;
-		String lhs = ctx.left.getText();
-		String rhs = ctx.right.getText();
-		if (ctx.comp_op().EQUAL() != null) {
-			op = new Equals(lhs, rhs);
-		} else if (ctx.comp_op().NOT_EQUAL() != null) {
-			op = new NotEquals(lhs, rhs);
-		} else if (ctx.comp_op().LEQ() != null) {
-			op = new LessThanEquals(lhs, true, Double.parseDouble(rhs));
-		} else if (ctx.comp_op().GEQ() != null) {
-			op = new GreaterThanEquals(lhs, true, Double.parseDouble(rhs));
-		} else if (ctx.comp_op().LTH() != null) {
-			op = new LessThan(lhs, true, Double.parseDouble(rhs));
-		} else if (ctx.comp_op().GTH() != null) {
-			op = new GreaterThan(lhs, true, Double.parseDouble(rhs));
-		}
-		if (!stacks.isEmpty()) {
-			ComplexOperator peek = (ComplexOperator) stacks.peek();
-			peek.addOperator(op);
-		}
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
 	public void enterComp_op(SQLParser.Comp_opContext ctx) {
 	}
 
@@ -3897,72 +3391,6 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 */
 	@Override
 	public void exitBetween_predicate_part_2(SQLParser.Between_predicate_part_2Context ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterIn_predicate(SQLParser.In_predicateContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitIn_predicate(SQLParser.In_predicateContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterIn_predicate_value(SQLParser.In_predicate_valueContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitIn_predicate_value(SQLParser.In_predicate_valueContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void enterIn_value_list(SQLParser.In_value_listContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitIn_value_list(SQLParser.In_value_listContext ctx) {
 	}
 
 	/**
@@ -4325,33 +3753,6 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 * </p>
 	 */
 	@Override
-	public void enterFunction_name(SQLParser.Function_nameContext ctx) {
-		switch (ctx.getText()) {
-		case "now":
-			System.out.println("Now operator:"+stacks.peek());
-			break;
-		}
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
-	public void exitFunction_name(SQLParser.Function_nameContext ctx) {
-	}
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>
-	 * The default implementation does nothing.
-	 * </p>
-	 */
-	@Override
 	public void enterSql_argument_list(SQLParser.Sql_argument_listContext ctx) {
 	}
 
@@ -4562,5 +3963,643 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 */
 	@Override
 	public void visitErrorNode(ErrorNode node) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterSql(SQLParser.SqlContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitSql(SQLParser.SqlContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterStatement(SQLParser.StatementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitStatement(SQLParser.StatementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterData_statement(SQLParser.Data_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitData_statement(SQLParser.Data_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterData_change_statement(SQLParser.Data_change_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitData_change_statement(SQLParser.Data_change_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterSchema_statement(SQLParser.Schema_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitSchema_statement(SQLParser.Schema_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterIndex_statement(SQLParser.Index_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitIndex_statement(SQLParser.Index_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterCreate_table_statement(SQLParser.Create_table_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitCreate_table_statement(SQLParser.Create_table_statementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterTable_elements(SQLParser.Table_elementsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitTable_elements(SQLParser.Table_elementsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterField_element(SQLParser.Field_elementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitField_element(SQLParser.Field_elementContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterField_type(SQLParser.Field_typeContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitField_type(SQLParser.Field_typeContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterParam_clause(SQLParser.Param_clauseContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitParam_clause(SQLParser.Param_clauseContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterParam(SQLParser.ParamContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitParam(SQLParser.ParamContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterMethod_specifier(SQLParser.Method_specifierContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitMethod_specifier(SQLParser.Method_specifierContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterTable_space_specifier(SQLParser.Table_space_specifierContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitTable_space_specifier(SQLParser.Table_space_specifierContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterTable_space_name(SQLParser.Table_space_nameContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitTable_space_name(SQLParser.Table_space_nameContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterTable_partitioning_clauses(SQLParser.Table_partitioning_clausesContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitTable_partitioning_clauses(SQLParser.Table_partitioning_clausesContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterRange_partitions(SQLParser.Range_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitRange_partitions(SQLParser.Range_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterRange_value_clause_list(SQLParser.Range_value_clause_listContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitRange_value_clause_list(SQLParser.Range_value_clause_listContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterRange_value_clause(SQLParser.Range_value_clauseContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitRange_value_clause(SQLParser.Range_value_clauseContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterHash_partitions(SQLParser.Hash_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitHash_partitions(SQLParser.Hash_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterIndividual_hash_partitions(SQLParser.Individual_hash_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitIndividual_hash_partitions(SQLParser.Individual_hash_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterIndividual_hash_partition(SQLParser.Individual_hash_partitionContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitIndividual_hash_partition(SQLParser.Individual_hash_partitionContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterHash_partitions_by_quantity(SQLParser.Hash_partitions_by_quantityContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitHash_partitions_by_quantity(SQLParser.Hash_partitions_by_quantityContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterList_partitions(SQLParser.List_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitList_partitions(SQLParser.List_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterList_value_clause_list(SQLParser.List_value_clause_listContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitList_value_clause_list(SQLParser.List_value_clause_listContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterList_value_partition(SQLParser.List_value_partitionContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitList_value_partition(SQLParser.List_value_partitionContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterColumn_partitions(SQLParser.Column_partitionsContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitColumn_partitions(SQLParser.Column_partitionsContext ctx) {
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterIn_predicate(SQLParser.In_predicateContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitIn_predicate(SQLParser.In_predicateContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void enterIn_predicate_value(SQLParser.In_predicate_valueContext ctx) {
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * The default implementation does nothing.
+	 * </p>
+	 */
+	@Override
+	public void exitIn_predicate_value(SQLParser.In_predicate_valueContext ctx) {
 	}
 }

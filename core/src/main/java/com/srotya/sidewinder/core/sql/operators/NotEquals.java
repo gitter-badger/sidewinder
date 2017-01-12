@@ -15,6 +15,8 @@
  */
 package com.srotya.sidewinder.core.sql.operators;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * @author ambud
  */
@@ -25,7 +27,7 @@ public class NotEquals extends SimpleOperator {
 	}
 
 	@Override
-	public boolean operate(Object value) {
+	public boolean operate(DataPoint value) {
 		return getLiteral().equals(value);
 	}
 

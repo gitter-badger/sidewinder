@@ -15,6 +15,8 @@
  */
 package com.srotya.sidewinder.core.sql.operators;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * @author ambud
  */
@@ -28,8 +30,12 @@ public abstract class NumericOperator extends SimpleOperator {
 	}
 
 	@Override
-	public boolean operate(Object value) {
-		return compareTrue((Number) getLiteral(), (Number) value);
+	public boolean operate(DataPoint value) {
+		if(getLiteral().equals("timestamp")) {
+			return compareTrue((Number) getLiteral(), (Number) value.getTimestamp());
+		}else {
+			return compareTrue((Number) getLiteral(), (Number) value.getLongValue());
+		}
 	}
 
 	public abstract boolean compareTrue(Number literal, Number value);

@@ -18,6 +18,8 @@ package com.srotya.sidewinder.core.sql.operators;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * @author ambud
  */
@@ -34,7 +36,7 @@ public abstract class ComplexOperator implements Operator {
 	}
 
 	@Override
-	public boolean operate(Object value) {
+	public boolean operate(DataPoint value) {
 		boolean result = operators.get(0).operate(value);
 		for (int i = 1; i < operators.size(); i++) {
 			boolean temp = result;
@@ -48,7 +50,7 @@ public abstract class ComplexOperator implements Operator {
 
 	public abstract boolean shortCircuit(boolean prev, boolean current);
 
-	public abstract boolean operator(boolean prev, Operator next, Object value);
+	public abstract boolean operator(boolean prev, Operator next, DataPoint value);
 
 	public void addOperator(Operator operator) {
 		operators.add(operator);

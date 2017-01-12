@@ -15,11 +15,13 @@
  */
 package com.srotya.sidewinder.core.sql.operators;
 
+import com.srotya.sidewinder.core.storage.DataPoint;
+
 /**
  * @author ambud
  */
 public interface Operator {
 	
-	boolean operate(Object value);
+	boolean operate(DataPoint value);
 
 }

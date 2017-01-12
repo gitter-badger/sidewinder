@@ -35,10 +35,33 @@ public class TestSQLDriver {
 		assertNull(filterTree);
 		assertEquals("test", parseSQL.getMeasurementName());
 	}
-	
+
 	@Test
 	public void testSimpleConditionStatement() {
-		SQLParserBaseListener parseSQL = SQLDriver.parseSQL("select * from test where diff(timestamp, now())<5");
+		System.out.println("Timestamp:" + System.currentTimeMillis());
+		SQLParserBaseListener parseSQL = SQLDriver.parseSQL("select * from test where datediff(timestamp, now())<5");
+		Operator filterTree = parseSQL.getFilterTree();
+		assertNotNull(filterTree);
+		assertEquals("test", parseSQL.getMeasurementName());
+		System.out.println(filterTree);
+	}
+
+	@Test
+	public void testSimpleInConditionStatement() {
+		System.out.println("Timestamp:" + System.currentTimeMillis());
+		SQLParserBaseListener parseSQL = SQLDriver
+				.parseSQL("select * from test where datediff(timestamp, now())<5 and tags in (host, cpu)");
+		Operator filterTree = parseSQL.getFilterTree();
+		assertNotNull(filterTree);
+		assertEquals("test", parseSQL.getMeasurementName());
+		System.out.println(filterTree);
+	}
+
+	@Test
+	public void testSimpleInValueConditionStatement() {
+		System.out.println("Timestamp:" + System.currentTimeMillis());
+		SQLParserBaseListener parseSQL = SQLDriver
+				.parseSQL("select * from test where value>5 and datediff(timestamp, now())<5 and tags in (host, cpu)");
 		Operator filterTree = parseSQL.getFilterTree();
 		assertNotNull(filterTree);
 		assertEquals("test", parseSQL.getMeasurementName());
