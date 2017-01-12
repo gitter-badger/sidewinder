@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql;
+package com.srotya.sidewinder.core.sql.operators;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class ComplexOperator implements Condition {
+/**
+ * @author ambud
+ */
+public abstract class ComplexOperator implements Operator {
 
-	private List<Condition> operators;
+	private List<Operator> operators;
 
-	public ComplexOperator(List<Condition> operators) {
+	public ComplexOperator(List<Operator> operators) {
 		if (operators == null) {
 			this.operators = new ArrayList<>();
 		} else {
@@ -45,17 +48,17 @@ public abstract class ComplexOperator implements Condition {
 
 	public abstract boolean shortCircuit(boolean prev, boolean current);
 
-	public abstract boolean operator(boolean prev, Condition next, Object value);
+	public abstract boolean operator(boolean prev, Operator next, Object value);
 
-	public void addOperator(Condition operator) {
+	public void addOperator(Operator operator) {
 		operators.add(operator);
 	}
 	
-	public void addOperators(List<Condition> operators) {
+	public void addOperators(List<Operator> operators) {
 		operators.addAll(operators);
 	}
 
-	public List<Condition> getOperators() {
+	public List<Operator> getOperators() {
 		return operators;
 	}
 

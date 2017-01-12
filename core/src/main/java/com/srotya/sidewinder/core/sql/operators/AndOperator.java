@@ -13,21 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql;
+package com.srotya.sidewinder.core.sql.operators;
 
-public class LessThan extends NumericOperator {
+import java.util.List;
 
-	public LessThan(String column, boolean isFloat, Number literal) {
-		super(column, isFloat, literal);
+/**
+ * @author ambud
+ */
+public class AndOperator extends ComplexOperator {
+
+	public AndOperator(List<Operator> operators) {
+		super(operators);
 	}
 
 	@Override
-	public boolean compareTrue(Number literal, Number value) {
-		if (isFloat()) {
-			return value.doubleValue() < literal.doubleValue();
-		} else {
-			return value.longValue() < literal.longValue();
-		}
+	public boolean shortCircuit(boolean prev, boolean current) {
+		return !(prev && current);
+	}
+
+	@Override
+	public boolean operator(boolean prev, Operator next, Object value) {
+		return prev && next.operate(value);
+	}
+
+	@Override
+	public String toString() {
+		return "AndOperator " + getOperators() + "";
 	}
 
 }

@@ -1,4 +1,4 @@
-package com.srotya.sidewinder.core.sql.parser;
+package com.srotya.sidewinder.core.sql;
 
 import java.util.Stack;
 
@@ -8,15 +8,16 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import com.srotya.sidewinder.core.sql.AndOperator;
-import com.srotya.sidewinder.core.sql.ComplexOperator;
-import com.srotya.sidewinder.core.sql.Condition;
-import com.srotya.sidewinder.core.sql.Equals;
-import com.srotya.sidewinder.core.sql.GreaterThan;
-import com.srotya.sidewinder.core.sql.GreaterThanEquals;
-import com.srotya.sidewinder.core.sql.LessThan;
-import com.srotya.sidewinder.core.sql.LessThanEquals;
-import com.srotya.sidewinder.core.sql.OrOperator;
+import com.srotya.sidewinder.core.sql.operators.AndOperator;
+import com.srotya.sidewinder.core.sql.operators.ComplexOperator;
+import com.srotya.sidewinder.core.sql.operators.Equals;
+import com.srotya.sidewinder.core.sql.operators.GreaterThan;
+import com.srotya.sidewinder.core.sql.operators.GreaterThanEquals;
+import com.srotya.sidewinder.core.sql.operators.LessThan;
+import com.srotya.sidewinder.core.sql.operators.LessThanEquals;
+import com.srotya.sidewinder.core.sql.operators.NotEquals;
+import com.srotya.sidewinder.core.sql.operators.Operator;
+import com.srotya.sidewinder.core.sql.operators.OrOperator;
 
 /**
  * This class provides an empty implementation of {@link SQLParserListener},
@@ -25,11 +26,26 @@ import com.srotya.sidewinder.core.sql.OrOperator;
  */
 public class SQLParserBaseListener implements SQLParserListener {
 
-	private Stack<Condition> stacks;
-	private Condition filterTree;
-	
-	public Condition getFilterTree() {
+	private Stack<Operator> stacks;
+	private Operator filterTree;
+	private String measurementName;
+
+	/**
+	 * Operator / filter tree
+	 * 
+	 * @return filterTree
+	 */
+	public Operator getFilterTree() {
 		return filterTree;
+	}
+
+	/**
+	 * Return measurement name (SQL Table name)
+	 * 
+	 * @return measurement name
+	 */
+	public String getMeasurementName() {
+		return measurementName;
 	}
 
 	/**
@@ -2253,7 +2269,7 @@ public class SQLParserBaseListener implements SQLParserListener {
 	@Override
 	public void enterAnd_predicate(SQLParser.And_predicateContext ctx) {
 		stacks.push(new AndOperator(null));
-		System.out.println("Entering And condition:"+ctx.getText());
+		System.out.println("Entering And condition:" + ctx.getText());
 	}
 
 	/**
@@ -2901,6 +2917,7 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 */
 	@Override
 	public void enterTable_primary(SQLParser.Table_primaryContext ctx) {
+		measurementName = ctx.getText();
 	}
 
 	/**
@@ -2968,7 +2985,6 @@ public class SQLParserBaseListener implements SQLParserListener {
 	@Override
 	public void enterWhere_clause(SQLParser.Where_clauseContext ctx) {
 		stacks = new Stack<>();
-		System.err.println("Building operator stack");
 	}
 
 	/**
@@ -2982,7 +2998,7 @@ public class SQLParserBaseListener implements SQLParserListener {
 	public void exitWhere_clause(SQLParser.Where_clauseContext ctx) {
 		filterTree = stacks.pop();
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 *
@@ -3795,12 +3811,13 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 */
 	@Override
 	public void exitComparison_predicate(SQLParser.Comparison_predicateContext ctx) {
-		Condition op = null;
+		Operator op = null;
 		String lhs = ctx.left.getText();
 		String rhs = ctx.right.getText();
 		if (ctx.comp_op().EQUAL() != null) {
 			op = new Equals(lhs, rhs);
 		} else if (ctx.comp_op().NOT_EQUAL() != null) {
+			op = new NotEquals(lhs, rhs);
 		} else if (ctx.comp_op().LEQ() != null) {
 			op = new LessThanEquals(lhs, true, Double.parseDouble(rhs));
 		} else if (ctx.comp_op().GEQ() != null) {
@@ -4309,6 +4326,11 @@ public class SQLParserBaseListener implements SQLParserListener {
 	 */
 	@Override
 	public void enterFunction_name(SQLParser.Function_nameContext ctx) {
+		switch (ctx.getText()) {
+		case "now":
+			System.out.println("Now operator:"+stacks.peek());
+			break;
+		}
 	}
 
 	/**

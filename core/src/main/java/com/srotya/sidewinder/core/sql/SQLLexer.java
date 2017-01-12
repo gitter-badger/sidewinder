@@ -1,4 +1,4 @@
-package com.srotya.sidewinder.core.sql.parser;
+package com.srotya.sidewinder.core.sql;
 
 // Generated from SQLLexer.g4 by ANTLR 4.6
 

@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql;
+package com.srotya.sidewinder.core.sql.operators;
 
+/**
+ * @author ambud
+ */
 public class LessThanEquals extends NumericOperator {
 
 	public LessThanEquals(String column, boolean isFloat, Number literal) {

@@ -1,4 +1,4 @@
-package com.srotya.sidewinder.core.sql.parser;
+package com.srotya.sidewinder.core.sql;
 
 // Generated from SQLParser.g4 by ANTLR 4.6
 
@@ -8,6 +8,9 @@ import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.*;
 import org.antlr.v4.runtime.tree.*;
+
+import com.srotya.sidewinder.core.sql.SQLParserListener;
+
 import java.util.List;
 import java.util.Iterator;
 import java.util.ArrayList;

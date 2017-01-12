@@ -13,9 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql;
+package com.srotya.sidewinder.core.sql.operators;
 
-public class BetweenOperator implements Condition {
+/**
+ * @author ambud
+ */
+public class BetweenOperator implements Operator {
 
 	private Number upperBound;
 	private Number lowerBound;

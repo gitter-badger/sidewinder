@@ -13,28 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql;
+package com.srotya.sidewinder.core.sql.operators;
 
-import java.util.List;
+/**
+ * @author ambud
+ */
+public class NotOperator implements Operator{
+	
+	private Operator inputOperator;
 
-public class OrOperator extends ComplexOperator {
-
-	public OrOperator(List<Condition> operators) {
-		super(operators);
+	public NotOperator(Operator inputOperator) {
+		this.inputOperator = inputOperator;
 	}
 
 	@Override
-	public boolean shortCircuit(boolean prev, boolean current) {
-		return prev || current;
+	public boolean operate(Object value) {
+		return !inputOperator.operate(value);
 	}
 
-	@Override
-	public boolean operator(boolean prev, Condition next, Object value) {
-		return prev || next.operate(value);
-	}
-
-	@Override
-	public String toString() {
-		return "OrOperator " + getOperators() + "";
-	}
 }

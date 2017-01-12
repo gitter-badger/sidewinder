@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.sql.parser;
+package com.srotya.sidewinder.core.sql;
 
 import java.util.Iterator;
 import java.util.List;
@@ -22,15 +22,22 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import com.srotya.sidewinder.core.sql.ComplexOperator;
-import com.srotya.sidewinder.core.sql.Condition;
-import com.srotya.sidewinder.core.sql.parser.SQLParser.SqlContext;
+import com.srotya.sidewinder.core.sql.SQLParser.SqlContext;
+import com.srotya.sidewinder.core.sql.operators.ComplexOperator;
+import com.srotya.sidewinder.core.sql.operators.Operator;
 
+/**
+ * @author ambud
+ *
+ */
+public class SQLDriver {
 
-public class SqlDriver {
-
-	public static void main(String[] args) {
-		SQLLexer lexer = new SQLLexer(new ANTLRInputStream("select * from testseries where p>2 and u<2"));
+	/**
+	 * @param sql
+	 * @return
+	 */
+	public static SQLParserBaseListener parseSQL(String sql) {
+		SQLLexer lexer = new SQLLexer(new ANTLRInputStream(sql));
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		SQLParser parser = new SQLParser(tokens);
 		SqlContext select_stmt = parser.sql();
@@ -38,19 +45,17 @@ public class SqlDriver {
 		ParseTreeWalker walker = new ParseTreeWalker();
 		SQLParserBaseListener listener = new SQLParserBaseListener();
 		walker.walk(listener, select_stmt);
-		
-		Condition tree = listener.getFilterTree();
-		prune(tree);
+
+		return listener;
 	}
 
-	
-	public static void prune(Condition tree) {
-		if(tree instanceof ComplexOperator) {
-			List<Condition> operators = ((ComplexOperator) tree).getOperators();
-			Iterator<Condition> iterator = operators.iterator();
-			while(iterator.hasNext()) {
-				Condition op = iterator.next();
-				if(op.getClass().equals(tree.getClass())) {
+	public static void prune(Operator tree) {
+		if (tree instanceof ComplexOperator) {
+			List<Operator> operators = ((ComplexOperator) tree).getOperators();
+			Iterator<Operator> iterator = operators.iterator();
+			while (iterator.hasNext()) {
+				Operator op = iterator.next();
+				if (op.getClass().equals(tree.getClass())) {
 					((ComplexOperator) tree).addOperator(op);
 				}
 			}
