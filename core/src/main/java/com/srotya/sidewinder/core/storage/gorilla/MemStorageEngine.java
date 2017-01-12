@@ -17,6 +17,7 @@ package com.srotya.sidewinder.core.storage.gorilla;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
+import com.srotya.sidewinder.core.utils.MurmurHash;
 
 /**
  * In-memory Timeseries {@link StorageEngine} implementation that uses the
@@ -61,13 +63,39 @@ import com.srotya.sidewinder.core.storage.StorageEngine;
  */
 public class MemStorageEngine implements StorageEngine {
 
+	private static final String TAG_SEPARATOR = "_";
 	private static final Logger logger = Logger.getLogger(MemStorageEngine.class.getName());
 	private static RejectException INVALID_DATAPOINT_EXCEPTION = new RejectException();
 	private Map<String, SortedMap<String, SortedMap<String, TimeSeries>>> databaseMap;
 	private AtomicInteger counter = new AtomicInteger(0);
+	private MemTagLookupTable tagLookupTable;
+
+	public static class MemTagLookupTable {
+
+		private Map<Integer, String> tagMap;
+
+		public MemTagLookupTable() {
+			tagMap = new ConcurrentHashMap<>();
+		}
+
+		public String createEntry(String tag) {
+			int hash32 = MurmurHash.hash32(tag);
+			String val = tagMap.get(hash32);
+			if (val == null) {
+				tagMap.put(hash32, tag);
+			}
+			return Integer.toHexString(hash32);
+		}
+
+		public String getEntry(String hexString) {
+			return tagMap.get(Integer.parseUnsignedInt(hexString, 16));
+		}
+
+	}
 
 	@Override
 	public void configure(Map<String, String> conf) throws IOException {
+		tagLookupTable = new MemTagLookupTable();
 		databaseMap = new ConcurrentHashMap<>();
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
 			// System.out.println(counter.getAndSet(0));
@@ -83,7 +111,8 @@ public class MemStorageEngine implements StorageEngine {
 			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
 			if (seriesMap != null) {
 				for (Entry<String, TimeSeries> entry : seriesMap.entrySet()) {
-					points.addAll(entry.getValue().queryDataPoints(startTime, endTime, valuePredicate));
+					List<String> seriesTags = decodeStringToTags(entry.getKey());
+					points.addAll(entry.getValue().queryDataPoints(seriesTags, startTime, endTime, valuePredicate));
 				}
 			} else {
 				throw new ItemNotFoundException("Measurement " + measurementName + " not found");
@@ -135,9 +164,28 @@ public class MemStorageEngine implements StorageEngine {
 		counter.incrementAndGet();
 	}
 
+	public String encodeTagsToString(List<String> tags) {
+		StringBuilder builder = new StringBuilder(tags.size() * 5);
+		for (String tag : tags) {
+			builder.append(tagLookupTable.createEntry(tag));
+			builder.append(TAG_SEPARATOR);
+		}
+		return builder.toString();
+	}
+
+	public List<String> decodeStringToTags(String tagString) {
+		List<String> tagList = new ArrayList<>();
+		for (String tag : tagString.split(TAG_SEPARATOR)) {
+			tagList.add(tagLookupTable.getEntry(tag));
+		}
+		return tagList;
+	}
+	
 	protected TimeSeries getOrCreateTimeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit,
 			long timestamp, boolean fp) {
-		String rowKey = "default";// builder.toString(); // replace with tags
+		String rowKey = encodeTagsToString(tags); // TODO replace with
+		// tags
+		Collections.sort(tags);
 
 		// check and create database map
 		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);

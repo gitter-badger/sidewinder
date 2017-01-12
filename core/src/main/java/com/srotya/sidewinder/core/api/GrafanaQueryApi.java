@@ -20,7 +20,9 @@ import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -85,7 +87,8 @@ public class GrafanaQueryApi {
 		startTs = tz.getOffset(startTs) + startTs;
 		endTs = tz.getOffset(endTs) + endTs;
 
-		// System.out.println("From:" + new Date(startTs) + "\tTo:" + new Date(endTs) + "\tRaw To:" + range);
+		// System.out.println("From:" + new Date(startTs) + "\tTo:" + new
+		// Date(endTs) + "\tRaw To:" + range);
 		List<String> measurementNames = new ArrayList<>();
 		JsonArray targets = json.get("targets").getAsJsonArray();
 		for (int i = 0; i < targets.size(); i++) {
@@ -103,17 +106,31 @@ public class GrafanaQueryApi {
 			} catch (ItemNotFoundException e) {
 				throw new NotFoundException(e.getMessage());
 			}
-			Target tar = new Target(measurementName);
+			Map<List<String>, Target> targetMap = new HashMap<>();
 			for (DataPoint dataPoint : points) {
+				Target tar = targetMap.get(dataPoint.getTags());
+				if (tar == null) {
+					tar = new Target(measurementName + tagToGrafanaString(dataPoint.getTags()));
+					targetMap.put(dataPoint.getTags(), tar);
+				}
 				if (!dataPoint.isFp()) {
 					tar.getDatapoints().add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
 				} else {
 					tar.getDatapoints().add(new Number[] { dataPoint.getValue(), dataPoint.getTimestamp() });
 				}
 			}
-			output.add(tar);
+			output.addAll(targetMap.values());
 		}
 		return output;
+	}
+
+	public static String tagToGrafanaString(List<String> tags) {
+		StringBuilder builder = new StringBuilder();
+		for (String tag : tags) {
+			builder.append("/");
+			builder.append(tag);
+		}
+		return builder.toString();
 	}
 
 	@Path("/query/search")

@@ -51,10 +51,22 @@ public class TestMemStorageEngine {
 	private Map<String, String> conf = new HashMap<>();
 
 	@Test
+	public void testTagEncodeDecode() throws IOException {
+		MemStorageEngine engine = new MemStorageEngine();
+		engine.configure(new HashMap<>());
+		String encodedStr = engine.encodeTagsToString(Arrays.asList("host", "value", "test"));
+
+		List<String> decodedStr = engine.decodeStringToTags(encodedStr);
+
+		System.out.println(decodedStr);
+	}
+
+	@Test
 	public void testConfigure() {
 		StorageEngine engine = new MemStorageEngine();
 		try {
-			engine.writeDataPoint("test", new DataPoint("test", "ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
+			engine.writeDataPoint("test",
+					new DataPoint("test", "ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
 			fail("Engine not initialized, shouldn't be able to write a datapoint");
 		} catch (Exception e) {
 		}
@@ -65,10 +77,11 @@ public class TestMemStorageEngine {
 			fail("No IOException should be thrown");
 		}
 		try {
-			engine.writeDataPoint("test", new DataPoint("test", "ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
+			engine.writeDataPoint("test",
+					new DataPoint("test", "ss", Arrays.asList("te"), System.currentTimeMillis(), 2.2));
 		} catch (Exception e) {
 			e.printStackTrace();
-			fail("Engine is initialized, no IO Exception should be thrown:"+e.getMessage());
+			fail("Engine is initialized, no IO Exception should be thrown:" + e.getMessage());
 		}
 	}
 
@@ -77,8 +90,8 @@ public class TestMemStorageEngine {
 		StorageEngine engine = new MemStorageEngine();
 		engine.configure(conf);
 		long ts = System.currentTimeMillis();
-		engine.writeSeries("test", "cpu", null, TimeUnit.MILLISECONDS, ts, 1, null);
-		engine.writeSeries("test", "cpu", null, TimeUnit.MILLISECONDS, ts + (400 * 60000), 4, null);
+		engine.writeSeries("test", "cpu", Arrays.asList("test"), TimeUnit.MILLISECONDS, ts, 1, null);
+		engine.writeSeries("test", "cpu", Arrays.asList("test"), TimeUnit.MILLISECONDS, ts + (400 * 60000), 4, null);
 		List<DataPoint> queryDataPoints = engine.queryDataPoints("test", "cpu", ts, ts + (400 * 60000), null, null);
 		assertEquals(2, queryDataPoints.size());
 		assertEquals(ts, queryDataPoints.get(0).getTimestamp());
@@ -111,12 +124,12 @@ public class TestMemStorageEngine {
 		long headerTimestamp = System.currentTimeMillis();
 		TimeSeriesBucket timeSeries = new TimeSeriesBucket(headerTimestamp);
 		timeSeries.addDataPoint(headerTimestamp, 1L);
-		TimeSeries.seriesToDataPoints(points, timeSeries, null, null, false);
+		TimeSeries.seriesToDataPoints(Arrays.asList("test"), points, timeSeries, null, null, false);
 		assertEquals(1, points.size());
 		points.clear();
 
 		Predicate timepredicate = new BetweenPredicate(Long.MAX_VALUE, Long.MAX_VALUE);
-		TimeSeries.seriesToDataPoints(points, timeSeries, timepredicate, null, false);
+		TimeSeries.seriesToDataPoints(Arrays.asList("test"), points, timeSeries, timepredicate, null, false);
 		assertEquals(0, points.size());
 	}
 
