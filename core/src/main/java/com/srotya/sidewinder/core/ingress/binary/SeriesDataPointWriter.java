@@ -46,11 +46,11 @@ public class SeriesDataPointWriter extends ChannelInboundHandlerAdapter {
 		}
 		try {
 			if (dp.isFp()) {
-				engine.writeSeries(null, dp.getMeasurementName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
-						dp.getValue(), null);
+				engine.writeSeries(dp.getDbName(), dp.getMeasurementName(), dp.getValueFieldName(), dp.getTags(),
+						TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.getValue(), null);
 			} else {
-				engine.writeSeries(null, dp.getMeasurementName(), null, TimeUnit.MILLISECONDS, dp.getTimestamp(),
-						dp.getLongValue(), null);
+				engine.writeSeries(dp.getDbName(), dp.getMeasurementName(), dp.getValueFieldName(), dp.getTags(),
+						TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.getLongValue(), null);
 			}
 
 		} catch (IOException e) {

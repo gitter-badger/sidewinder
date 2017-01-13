@@ -48,34 +48,16 @@ public interface StorageEngine {
 	 */
 	public void disconnect() throws IOException;
 
-	/**
-	 * @param measurementName
-	 * @param tags
-	 * @param unit
-	 * @param timestamp
-	 * @param value
-	 * @return
-	 * @throws IOException
-	 */
-	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
-			long value, Callback callback) throws IOException;
+	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
+			TimeUnit unit, long timestamp, long value, Callback callback) throws IOException;
 
-	/**
-	 * @param measurementName
-	 * @param tags
-	 * @param unit
-	 * @param timestamp
-	 * @param timeBucket
-	 * @param value
-	 * @throws IOException
-	 */
-	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
-			double value, Callback callback) throws IOException;
+	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
+			TimeUnit unit, long timestamp, double value, Callback callback) throws IOException;
 
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException;
 
-	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags, Predicate valuePredicate) throws ItemNotFoundException;
+	public Map<String, List<DataPoint>> queryDataPoints(String dbName, String measurementName, String valueFieldName, long startTime,
+			long endTime, List<String> tags, Predicate valuePredicate) throws ItemNotFoundException;
 
 	public Set<String> getMeasurementsLike(String dbName, String partialMeasurementName) throws IOException;
 
@@ -86,7 +68,7 @@ public interface StorageEngine {
 	public void deleteAllData() throws Exception;
 
 	public boolean checkIfExists(String dbName) throws Exception;
-	
+
 	public boolean checkIfExists(String dbName, String measurement) throws Exception;
 
 	public void dropDatabase(String dbName) throws Exception;

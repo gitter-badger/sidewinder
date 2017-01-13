@@ -33,7 +33,7 @@ public class TestHttpDataPointDecoder {
 		String testPoints = "cpu,host=server01,region=uswest value=1 1434055562000000000";
 		List<DataPoint> dps = HTTPDataPointDecoder.dataPointsFromString("test", testPoints);
 		DataPoint dp = dps.get(0);
-		assertEquals("cpu-value", dp.getMeasurementName());
+		assertEquals("cpu", dp.getMeasurementName());
 		assertTrue(dp.getTags().contains("host=server01"));
 		assertTrue(dp.getTags().contains("region=uswest"));
 		assertEquals(1, dp.getLongValue());
@@ -45,7 +45,7 @@ public class TestHttpDataPointDecoder {
 		String testPoints = "cpu,host=server01,region=uswest value=1 1434055562000000000\ncpu,host=server01,region=uswest value=1 1434055562000000000\ncpu,host=server01,region=uswest value=1 1434055562000000000";
 		List<DataPoint> dps = HTTPDataPointDecoder.dataPointsFromString("test", testPoints);
 		for (DataPoint dp : dps) {
-			assertEquals("cpu-value", dp.getMeasurementName());
+			assertEquals("cpu", dp.getMeasurementName());
 			assertTrue(dp.getTags().contains("host=server01"));
 			assertTrue(dp.getTags().contains("region=uswest"));
 			assertEquals(1, dp.getLongValue());
@@ -61,13 +61,13 @@ public class TestHttpDataPointDecoder {
 		assertEquals(2, dps.size());
 
 		DataPoint dp = dps.get(0);
-		assertEquals("cpu-value", dp.getMeasurementName());
+		assertEquals("cpu", dp.getMeasurementName());
 		assertEquals(0, dp.getTags().size());
 		assertEquals(1, dp.getLongValue());
 		assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
 
 		dp = dps.get(1);
-		assertEquals("cpu-value1", dp.getMeasurementName());
+		assertEquals("cpu", dp.getMeasurementName());
 		assertEquals(0, dp.getTags().size());
 		assertEquals(2, dp.getLongValue());
 		assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
@@ -79,7 +79,7 @@ public class TestHttpDataPointDecoder {
 		List<DataPoint> dps = HTTPDataPointDecoder.dataPointsFromString("test", testPoints);
 		assertEquals(1, dps.size());
 		DataPoint dp = dps.get(0);
-		assertEquals("cpu-value", dp.getMeasurementName());
+		assertEquals("cpu", dp.getMeasurementName());
 		assertEquals(0, dp.getTags().size());
 		assertEquals(1, dp.getLongValue());
 		assertEquals(1434055562000000000L/(1000*1000), dp.getTimestamp());
@@ -91,7 +91,7 @@ public class TestHttpDataPointDecoder {
 		List<DataPoint> dps = HTTPDataPointDecoder.dataPointsFromString("test", testPoints);
 		assertEquals(1, dps.size());
 		DataPoint dp = dps.get(0);
-		assertEquals("cpu-value", dp.getMeasurementName());
+		assertEquals("cpu", dp.getMeasurementName());
 		assertEquals(0, dp.getTags().size());
 		assertEquals(1, dp.getLongValue());
 		long ts = System.currentTimeMillis();

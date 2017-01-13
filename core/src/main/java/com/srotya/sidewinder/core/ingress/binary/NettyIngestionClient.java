@@ -16,6 +16,7 @@
 package com.srotya.sidewinder.core.ingress.binary;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.srotya.sidewinder.core.storage.DataPoint;
@@ -60,7 +61,7 @@ public class NettyIngestionClient {
 			for (int k = 0; k < TOTAL; k++) {
 				List<DataPoint> data = new ArrayList<>();
 				for (int i = 0; i < 100; i++) {
-					DataPoint dp = new DataPoint("test", "cpu" + i, null, System.currentTimeMillis() + i * k,
+					DataPoint dp = new DataPoint("test", "cpu" + i, "value", Arrays.asList("2"), System.currentTimeMillis() + i * k,
 							System.currentTimeMillis() + i * k);
 					dp.setFp(false);
 					data.add(dp);

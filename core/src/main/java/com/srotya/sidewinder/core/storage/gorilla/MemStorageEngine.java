@@ -18,6 +18,7 @@ package com.srotya.sidewinder.core.storage.gorilla;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,9 +67,9 @@ public class MemStorageEngine implements StorageEngine {
 	private static final String TAG_SEPARATOR = "_";
 	private static final Logger logger = Logger.getLogger(MemStorageEngine.class.getName());
 	private static RejectException INVALID_DATAPOINT_EXCEPTION = new RejectException();
-	private Map<String, SortedMap<String, SortedMap<String, TimeSeries>>> databaseMap;
+	private Map<String, Map<String, SortedMap<String, TimeSeries>>> databaseMap;
 	private AtomicInteger counter = new AtomicInteger(0);
-	private MemTagLookupTable tagLookupTable;
+	private Map<String, Map<String, MemTagLookupTable>> tagLookupTable;
 
 	public static class MemTagLookupTable {
 
@@ -95,7 +96,7 @@ public class MemStorageEngine implements StorageEngine {
 
 	@Override
 	public void configure(Map<String, String> conf) throws IOException {
-		tagLookupTable = new MemTagLookupTable();
+		tagLookupTable = new ConcurrentHashMap<>();
 		databaseMap = new ConcurrentHashMap<>();
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
 			// System.out.println(counter.getAndSet(0));
@@ -103,16 +104,28 @@ public class MemStorageEngine implements StorageEngine {
 	}
 
 	@Override
-	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags, Predicate valuePredicate) throws ItemNotFoundException {
-		List<DataPoint> points = new ArrayList<>();
-		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
+	public Map<String, List<DataPoint>> queryDataPoints(String dbName, String measurementName, String valueFieldName,
+			long startTime, long endTime, List<String> tags, Predicate valuePredicate) throws ItemNotFoundException {
+		Map<String, List<DataPoint>> resultMap = new HashMap<>();
+		Map<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
 		if (measurementMap != null) {
 			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
 			if (seriesMap != null) {
 				for (Entry<String, TimeSeries> entry : seriesMap.entrySet()) {
-					List<String> seriesTags = decodeStringToTags(entry.getKey());
-					points.addAll(entry.getValue().queryDataPoints(seriesTags, startTime, endTime, valuePredicate));
+					List<DataPoint> points = new ArrayList<>();
+					String[] keys = entry.getKey().split("#");
+					if (keys.length != 2) {
+						// TODO report major error, series ingested without tag
+						// field encoding
+						continue;
+					}
+					MemTagLookupTable memTagLookupTable = getOrCreateMemTagLookupTable(dbName, measurementName);
+					List<String> seriesTags = decodeStringToTags(memTagLookupTable, keys[1]);
+					points.addAll(
+							entry.getValue().queryDataPoints(keys[0], seriesTags, startTime, endTime, valuePredicate));
+					if (points.size() > 0) {
+						resultMap.put(measurementName + "-" + keys[0] + tagToString(seriesTags), points);
+					}
 				}
 			} else {
 				throw new ItemNotFoundException("Measurement " + measurementName + " not found");
@@ -120,12 +133,21 @@ public class MemStorageEngine implements StorageEngine {
 		} else {
 			throw new ItemNotFoundException("Database " + dbName + " not found");
 		}
-		return points;
+		return resultMap;
+	}
+
+	public static String tagToString(List<String> tags) {
+		StringBuilder builder = new StringBuilder();
+		for (String tag : tags) {
+			builder.append("/");
+			builder.append(tag);
+		}
+		return builder.toString();
 	}
 
 	@Override
 	public Set<String> getMeasurementsLike(String dbName, String partialMeasurementName) throws IOException {
-		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
+		Map<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
 		partialMeasurementName = partialMeasurementName.trim();
 		if (partialMeasurementName.isEmpty()) {
 			return measurementMap.keySet();
@@ -142,8 +164,8 @@ public class MemStorageEngine implements StorageEngine {
 
 	@Override
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getMeasurementName(), dp.getTags(),
-				TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.isFp());
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getMeasurementName(), dp.getValueFieldName(),
+				dp.getTags(), TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.isFp());
 		if (dp.isFp() != timeSeries.isFp()) {
 			// drop this datapoint, mixed series are not allowed
 			throw INVALID_DATAPOINT_EXCEPTION;
@@ -157,14 +179,15 @@ public class MemStorageEngine implements StorageEngine {
 	}
 
 	@Override
-	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
-			long value, Callback callback) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, tags, unit, timestamp, false);
+	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
+			TimeUnit unit, long timestamp, long value, Callback callback) throws IOException {
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, valueFieldName, tags, unit, timestamp,
+				false);
 		timeSeries.addDataPoint(unit, timestamp, value);
 		counter.incrementAndGet();
 	}
 
-	public String encodeTagsToString(List<String> tags) {
+	public static String encodeTagsToString(MemTagLookupTable tagLookupTable, List<String> tags) {
 		StringBuilder builder = new StringBuilder(tags.size() * 5);
 		for (String tag : tags) {
 			builder.append(tagLookupTable.createEntry(tag));
@@ -173,22 +196,29 @@ public class MemStorageEngine implements StorageEngine {
 		return builder.toString();
 	}
 
-	public List<String> decodeStringToTags(String tagString) {
+	public static List<String> decodeStringToTags(MemTagLookupTable tagLookupTable, String tagString) {
 		List<String> tagList = new ArrayList<>();
 		for (String tag : tagString.split(TAG_SEPARATOR)) {
 			tagList.add(tagLookupTable.getEntry(tag));
 		}
 		return tagList;
 	}
-	
-	protected TimeSeries getOrCreateTimeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit,
-			long timestamp, boolean fp) {
-		String rowKey = encodeTagsToString(tags); // TODO replace with
-		// tags
+
+	protected TimeSeries getOrCreateTimeSeries(String dbName, String measurementName, String valueFieldName,
+			List<String> tags, TimeUnit unit, long timestamp, boolean fp) {
 		Collections.sort(tags);
 
+		MemTagLookupTable memTagLookupTable = getOrCreateMemTagLookupTable(dbName, measurementName);
+
+		String encodeTagsToString = encodeTagsToString(memTagLookupTable, tags);
+		StringBuilder rowKeyBuilder = new StringBuilder(valueFieldName.length() + 1 + encodeTagsToString.length());
+		rowKeyBuilder.append(valueFieldName);
+		rowKeyBuilder.append("#");
+		rowKeyBuilder.append(encodeTagsToString);
+		String rowKey = rowKeyBuilder.toString();
+
 		// check and create database map
-		SortedMap<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
+		Map<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
 		if (measurementMap == null) {
 			measurementMap = new ConcurrentSkipListMap<>();
 			databaseMap.put(dbName, measurementMap);
@@ -213,10 +243,26 @@ public class MemStorageEngine implements StorageEngine {
 		return timeSeries;
 	}
 
+	private MemTagLookupTable getOrCreateMemTagLookupTable(String dbName, String measurementName) {
+		Map<String, MemTagLookupTable> lookupMap = tagLookupTable.get(dbName);
+		if (lookupMap == null) {
+			lookupMap = new ConcurrentHashMap<>();
+			tagLookupTable.put(dbName, lookupMap);
+		}
+
+		MemTagLookupTable memTagLookupTable = lookupMap.get(measurementName);
+		if (memTagLookupTable == null) {
+			memTagLookupTable = new MemTagLookupTable();
+			lookupMap.put(measurementName, memTagLookupTable);
+		}
+		return memTagLookupTable;
+	}
+
 	@Override
-	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
-			double value, Callback callback) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, tags, unit, timestamp, true);
+	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
+			TimeUnit unit, long timestamp, double value, Callback callback) throws IOException {
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, valueFieldName, tags, unit, timestamp,
+				true);
 		timeSeries.addDataPoint(unit, timestamp, value);
 		counter.incrementAndGet();
 	}

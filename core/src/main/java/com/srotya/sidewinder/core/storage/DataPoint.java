@@ -27,6 +27,7 @@ public class DataPoint implements Serializable {
 	private boolean isFp;
 	private String dbName;
 	private String measurementName;
+	private String valueFieldName;
 	private List<String> tags;
 	private long timestamp;
 	private long value;
@@ -36,17 +37,19 @@ public class DataPoint implements Serializable {
 		this.value = value;
 	}
 
-	public DataPoint(String dbName, String measurementName, List<String> tags, long timestamp, long value) {
+	public DataPoint(String dbName, String measurementName, String valueFieldName, List<String> tags, long timestamp, long value) {
 		this.dbName = dbName;
 		this.measurementName = measurementName;
+		this.valueFieldName = valueFieldName;
 		this.tags = tags;
 		this.timestamp = timestamp;
 		this.value = value;
 	}
 
-	public DataPoint(String dbName, String seriesName, List<String> tags, long timestamp, double value) {
+	public DataPoint(String dbName, String seriesName, String valueFieldName, List<String> tags, long timestamp, double value) {
 		this.dbName = dbName;
 		this.measurementName = seriesName;
+		this.valueFieldName = valueFieldName;
 		this.tags = tags;
 		this.timestamp = timestamp;
 		this.value = Double.doubleToLongBits(value);
@@ -147,6 +150,20 @@ public class DataPoint implements Serializable {
 	 */
 	public void setDbName(String dbName) {
 		this.dbName = dbName;
+	}
+
+	/**
+	 * @return the valueFieldName
+	 */
+	public String getValueFieldName() {
+		return valueFieldName;
+	}
+
+	/**
+	 * @param valueFieldName the valueFieldName to set
+	 */
+	public void setValueFieldName(String valueFieldName) {
+		this.valueFieldName = valueFieldName;
 	}
 
 	/*

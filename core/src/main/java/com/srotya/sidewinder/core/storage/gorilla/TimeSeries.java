@@ -55,7 +55,8 @@ public class TimeSeries {
 		bucketMap = new ConcurrentSkipListMap<>();
 	}
 
-	public List<DataPoint> queryDataPoints(List<String> appendTags, long startTime, long endTime, Predicate valuePredicate) {
+	public List<DataPoint> queryDataPoints(String appendFieldValueName, List<String> appendTags, long startTime,
+			long endTime, Predicate valuePredicate) {
 		if (startTime > endTime) {
 			// swap start and end times if they are off
 			startTime = startTime ^ endTime;
@@ -73,11 +74,13 @@ public class TimeSeries {
 		if (series == null || series.isEmpty()) {
 			TimeSeriesBucket timeSeries = bucketMap.get(startTsBucket);
 			if (timeSeries != null) {
-				seriesToDataPoints(appendTags, points, timeSeries, timeRangePredicate, valuePredicate, fp);
+				seriesToDataPoints(appendFieldValueName, appendTags, points, timeSeries, timeRangePredicate,
+						valuePredicate, fp);
 			}
 		} else {
 			for (TimeSeriesBucket timeSeries : series.values()) {
-				seriesToDataPoints(appendTags, points, timeSeries, timeRangePredicate, valuePredicate, fp);
+				seriesToDataPoints(appendFieldValueName, appendTags, points, timeSeries, timeRangePredicate,
+						valuePredicate, fp);
 			}
 		}
 		return points;
@@ -110,7 +113,9 @@ public class TimeSeries {
 	 * object. Datapoints are filtered by the supplied predicates before they
 	 * are returned. These predicates are pushed down to the reader for
 	 * efficiency and performance as it prevents unnecessary object creation.
-	 * @param appendTags 
+	 * 
+	 * @param appendFieldValueName
+	 * @param appendTags
 	 * 
 	 * @param points
 	 *            list data points are appended to
@@ -122,8 +127,9 @@ public class TimeSeries {
 	 *            value filter
 	 * @return the points argument
 	 */
-	public static List<DataPoint> seriesToDataPoints(List<String> appendTags, List<DataPoint> points, TimeSeriesBucket timeSeries,
-			Predicate timePredicate, Predicate valuePredicate, boolean isFp) {
+	public static List<DataPoint> seriesToDataPoints(String appendFieldValueName, List<String> appendTags,
+			List<DataPoint> points, TimeSeriesBucket timeSeries, Predicate timePredicate, Predicate valuePredicate,
+			boolean isFp) {
 		Reader reader = timeSeries.getReader(timePredicate, valuePredicate);
 		DataPoint point = null;
 		while (true) {
@@ -131,6 +137,7 @@ public class TimeSeries {
 				point = reader.readPair();
 				if (point != null) {
 					point.setFp(isFp);
+					point.setValueFieldName(appendFieldValueName);
 					point.setTags(appendTags);
 					points.add(point);
 				}

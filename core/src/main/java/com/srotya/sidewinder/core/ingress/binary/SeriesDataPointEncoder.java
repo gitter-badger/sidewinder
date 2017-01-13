@@ -44,6 +44,10 @@ public class SeriesDataPointEncoder extends MessageToByteEncoder<List<DataPoint>
 		byte[] measurementNameBytes = dataPoint.getMeasurementName().getBytes();
 		buf.writeInt(measurementNameBytes.length);
 		buf.writeBytes(measurementNameBytes);
+		byte[] valueNameBytes = dataPoint.getValueFieldName().getBytes();
+		buf.writeInt(valueNameBytes.length);
+		buf.writeBytes(valueNameBytes);
+		
 		buf.writeLong(dataPoint.getTimestamp());
 		if (dataPoint.isFp()) {
 			buf.writeByte('0');

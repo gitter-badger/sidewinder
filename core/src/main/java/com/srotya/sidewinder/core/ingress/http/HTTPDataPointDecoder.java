@@ -160,7 +160,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 					timestamp = Long.parseLong(parts[2]) / (1000 * 1000);
 				}
 				String[] key = parts[0].split(",");
-				String seriesName = key[0];
+				String measurementName = key[0];
 				List<String> tags = new ArrayList<>();
 				for (int i = 1; i < key.length; i++) {
 					tags.add(key[i]);
@@ -168,10 +168,10 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 				String[] fields = parts[1].split(",");
 				for (String field : fields) {
 					String[] fv = field.split("=");
-					String prefix = fv[0];
+					String valueFieldName = fv[0];
 					if (fv[1].contains(".")) {
 						double value = Double.parseDouble(fv[1]);
-						DataPoint dp = new DataPoint(dbName, seriesName + "-" + prefix, tags, timestamp, value);
+						DataPoint dp = new DataPoint(dbName, measurementName, valueFieldName, tags, timestamp, value);
 						dp.setFp(true);
 						dps.add(dp);
 					} else {
@@ -179,7 +179,7 @@ public class HTTPDataPointDecoder extends SimpleChannelInboundHandler<Object> {
 							fv[1] = fv[1].substring(0, fv[1].length() - 1);
 						}
 						long value = Long.parseLong(fv[1]);
-						DataPoint dp = new DataPoint(dbName, seriesName + "-" + prefix, tags, timestamp, value);
+						DataPoint dp = new DataPoint(dbName, measurementName, valueFieldName, tags, timestamp, value);
 						dp.setFp(false);
 						dps.add(dp);
 					}

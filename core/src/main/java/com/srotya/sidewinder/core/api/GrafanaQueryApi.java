@@ -20,9 +20,9 @@ import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -100,37 +100,27 @@ public class GrafanaQueryApi {
 
 		List<Target> output = new ArrayList<>();
 		for (String measurementName : measurementNames) {
-			List<DataPoint> points;
+			Map<String, List<DataPoint>> points;
 			try {
-				points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, null, null);
+				// TODO fix query point
+				points = engine.queryDataPoints(dbName, measurementName, "value", startTs, endTs, null, null);
 			} catch (ItemNotFoundException e) {
 				throw new NotFoundException(e.getMessage());
 			}
-			Map<List<String>, Target> targetMap = new HashMap<>();
-			for (DataPoint dataPoint : points) {
-				Target tar = targetMap.get(dataPoint.getTags());
-				if (tar == null) {
-					tar = new Target(measurementName + tagToGrafanaString(dataPoint.getTags()));
-					targetMap.put(dataPoint.getTags(), tar);
+			for (Entry<String, List<DataPoint>> entry : points.entrySet()) {
+				List<DataPoint> dataPoints = entry.getValue();
+				Target tar = new Target(entry.getKey());
+				for (DataPoint dataPoint : dataPoints) {
+					if (!dataPoint.isFp()) {
+						tar.getDatapoints().add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
+					} else {
+						tar.getDatapoints().add(new Number[] { dataPoint.getValue(), dataPoint.getTimestamp() });
+					}
 				}
-				if (!dataPoint.isFp()) {
-					tar.getDatapoints().add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
-				} else {
-					tar.getDatapoints().add(new Number[] { dataPoint.getValue(), dataPoint.getTimestamp() });
-				}
+				output.add(tar);
 			}
-			output.addAll(targetMap.values());
 		}
 		return output;
-	}
-
-	public static String tagToGrafanaString(List<String> tags) {
-		StringBuilder builder = new StringBuilder();
-		for (String tag : tags) {
-			builder.append("/");
-			builder.append(tag);
-		}
-		return builder.toString();
 	}
 
 	@Path("/query/search")

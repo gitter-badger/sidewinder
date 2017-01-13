@@ -19,6 +19,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -83,10 +85,10 @@ public class MeasurementOpsApi {
 	@Path("/all")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
-	public List<DataPoint> getAllOfMeasurement(@PathParam(DatabaseOpsApi.DB_NAME) String dbName,
+	public Map<String, List<DataPoint>> getAllOfMeasurement(@PathParam(DatabaseOpsApi.DB_NAME) String dbName,
 			@PathParam(MEASUREMENT) String measurementName) {
 		try {
-			return engine.queryDataPoints(dbName, measurementName, 0, Long.MAX_VALUE, Arrays.asList(""), null);
+			return engine.queryDataPoints(dbName, measurementName, "value", 0, Long.MAX_VALUE, Arrays.asList(""), null);
 		} catch (ItemNotFoundException e) {
 			throw new NotFoundException(e.getMessage());
 		}
@@ -111,14 +113,16 @@ public class MeasurementOpsApi {
 				startTs = sdf.parse(startTime).getTime();
 				endTs = sdf.parse(endTime).getTime();
 			}
-			List<DataPoint> points = engine.queryDataPoints(dbName, measurementName, startTs, endTs, Arrays.asList(""),
-					null);
+			Map<String, List<DataPoint>> points = engine.queryDataPoints(dbName, measurementName, "value", startTs,
+					endTs, Arrays.asList(""), null);
 			List<Number[]> response = new ArrayList<>();
-			for (DataPoint dataPoint : points) {
-				if (!dataPoint.isFp()) {
-					response.add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
-				} else {
-					response.add(new Number[] { dataPoint.getValue(), dataPoint.getTimestamp() });
+			for (Entry<String, List<DataPoint>> entry : points.entrySet()) {
+				for (DataPoint dataPoint : entry.getValue()) {
+					if (!dataPoint.isFp()) {
+						response.add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
+					} else {
+						response.add(new Number[] { dataPoint.getValue(), dataPoint.getTimestamp() });
+					}
 				}
 			}
 			return response;

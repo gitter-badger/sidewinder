@@ -114,11 +114,11 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 	}
 
 	@Override
-	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
-			long value, Callback callback) throws IOException {
+	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
+			TimeUnit unit, long timestamp, long value, Callback callback) throws IOException {
 		int workerId = computeWorkerId(dbName, measurementName);
 		if (workerId == columbus.getSelfWorkerId()) {
-			local.writeSeries(dbName, measurementName, tags, unit, timestamp, value, callback);
+			local.writeSeries(dbName, measurementName, valueFieldName, tags, unit, timestamp, value, callback);
 		} else {
 			TCPClient tcpClient = clients.get(workerId);
 			tcpClient.write(dbName, measurementName, tags, unit, timestamp, value);
@@ -126,11 +126,11 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 	}
 
 	@Override
-	public void writeSeries(String dbName, String measurementName, List<String> tags, TimeUnit unit, long timestamp,
-			double value, Callback callback) throws IOException {
+	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
+			TimeUnit unit, long timestamp, double value, Callback callback) throws IOException {
 		int workerId = computeWorkerId(dbName, measurementName);
 		if (workerId == columbus.getSelfWorkerId()) {
-			local.writeSeries(dbName, measurementName, tags, unit, timestamp, value, callback);
+			local.writeSeries(dbName, measurementName, valueFieldName, tags, unit, timestamp, value, callback);
 		} else {
 			TCPClient tcpClient = clients.get(workerId);
 			tcpClient.write(dbName, measurementName, tags, unit, timestamp, value);
@@ -140,11 +140,11 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 	@Override
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
 		if (dp.isFp()) {
-			writeSeries(dbName, dp.getMeasurementName(), dp.getTags(), TimeUnit.MILLISECONDS, dp.getTimestamp(),
-					dp.getValue(), null);
+			writeSeries(dbName, dp.getMeasurementName(), dp.getValueFieldName(), dp.getTags(), TimeUnit.MILLISECONDS,
+					dp.getTimestamp(), dp.getValue(), null);
 		} else {
-			writeSeries(dbName, dp.getMeasurementName(), dp.getTags(), TimeUnit.MILLISECONDS, dp.getTimestamp(),
-					dp.getLongValue(), null);
+			writeSeries(dbName, dp.getMeasurementName(), dp.getValueFieldName(), dp.getTags(), TimeUnit.MILLISECONDS,
+					dp.getTimestamp(), dp.getLongValue(), null);
 		}
 	}
 
@@ -162,11 +162,12 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 	}
 
 	@Override
-	public List<DataPoint> queryDataPoints(String dbName, String measurementName, long startTime, long endTime,
-			List<String> tags, Predicate valuePredicate) throws ItemNotFoundException {
+	public Map<String, List<DataPoint>> queryDataPoints(String dbName, String measurementName, String valueFieldName,
+			long startTime, long endTime, List<String> tags, Predicate valuePredicate) throws ItemNotFoundException {
 		int workerId = computeWorkerId(dbName, measurementName);
 		if (workerId == columbus.getSelfWorkerId()) {
-			return local.queryDataPoints(dbName, measurementName, startTime, endTime, tags, valuePredicate);
+			return local.queryDataPoints(dbName, measurementName, valueFieldName, startTime, endTime, tags,
+					valuePredicate);
 		} else {
 			WorkerEntry entry = columbus.getWorkerMap().get(workerId);
 			entry.getWorkerAddress();
