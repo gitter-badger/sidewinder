@@ -2,6 +2,8 @@
 
 System.register(['app/plugins/sdk', './css/query-editor.css!'], function (_export, _context) {
   "use strict";
+  
+  var tagSegments = [];
 
   var QueryCtrl, _createClass, GenericDatasourceQueryCtrl;
 
@@ -10,7 +12,7 @@ System.register(['app/plugins/sdk', './css/query-editor.css!'], function (_expor
       throw new TypeError("Cannot call a class as a function");
     }
   }
-
+  
   function _possibleConstructorReturn(self, call) {
     if (!self) {
       throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
@@ -70,26 +72,85 @@ System.register(['app/plugins/sdk', './css/query-editor.css!'], function (_expor
           _this.uiSegmentSrv = uiSegmentSrv;
           _this.target.target = _this.target.target || 'select metric';
           _this.target.type = _this.target.type || 'timeserie';
+          if(!_this.target.filters) {
+        	  _this.target.filters = [{}];
+          }
+          console.log(_this.target);
           return _this;
         }
 
         _createClass(GenericDatasourceQueryCtrl, [{
-          key: 'getOptions',
+          key: 'getMeasurementOptions',
           value: function getOptions() {
             return this.datasource.metricFindQuery(this.target).then(this.uiSegmentSrv.transformToSegments(false));
-            // Options have to be transformed by uiSegmentSrv to be usable by metric-segment-model directive
+            // Options have to be transformed by uiSegmentSrv to be usable by
+			// metric-segment-model directive
           }
         }, {
+            key: 'getTagOptions',
+            value: function getOptions() {
+            	var res = this.datasource.tagFindQuery(this.target).then(this.uiSegmentSrv.transformToSegments(false));
+              return res;
+              // Options have to be transformed by uiSegmentSrv to be usable
+				// by metric-segment-model directive
+            }
+          }, {
+              key: 'getConditionOptions',
+              value: function getConditionOptions() {
+                return this.datasource.conditionTypes(this.target).then(this.uiSegmentSrv.transformToSegments(false));
+                // Options have to be transformed by uiSegmentSrv to be usable
+				// by metric-segment-model directive
+              }
+            }, {
+              key: 'getFieldOptions',
+              value: function getFieldOptions() {
+                return this.datasource.fieldOptionsQuery(this.target).then(this.uiSegmentSrv.transformToSegments(false));
+                // Options have to be transformed by uiSegmentSrv to be usable
+				// by metric-segment-model directive
+              }
+            },
+         {
           key: 'toggleEditorMode',
           value: function toggleEditorMode() {
             this.target.rawQuery = !this.target.rawQuery;
           }
-        }, {
+        },
+        {
+            key: 'addFilter',
+            value: function addFilter() {
+            	if(this.target.filters.length>0) {
+            		this.target.filters.push({'type':'condition', 'value':'AND'});
+            	}
+            	this.target.filters.push({});
+            	this.panelCtrl.refresh();
+            }
+          }
+        ,
+        {
+            key: 'removeFilter',
+            value: function removeFilter(index, segment) {
+            	this.target.filters.splice(index, 1)
+            	if(index>1 || (index==0 && this.target.filters.length>0)) {
+            		this.target.filters.splice(index, 1);
+            	}
+            	if(index>=this.target.filters.length) {
+            		this.target.filters.splice(this.target.filters.length-1, 1);
+            	}
+            	this.panelCtrl.refresh();
+            }
+          }
+        ,{
           key: 'onChangeInternal',
           value: function onChangeInternal() {
             this.panelCtrl.refresh(); // Asks the panel to refresh data.
           }
-        }]);
+        },{
+            key: 'onChangeFilter',
+            value: function onChangeFilter(index, segment) {
+            	this.target.filters[index] = segment;
+              // this.panelCtrl.refresh(); // Asks the panel to refresh data.
+            }
+          }]);
 
         return GenericDatasourceQueryCtrl;
       }(QueryCtrl));
@@ -100,4 +161,6 @@ System.register(['app/plugins/sdk', './css/query-editor.css!'], function (_expor
     }
   };
 });
-//# sourceMappingURL=query_ctrl.js.map
+
+
+// # sourceMappingURL=query_ctrl.js.map

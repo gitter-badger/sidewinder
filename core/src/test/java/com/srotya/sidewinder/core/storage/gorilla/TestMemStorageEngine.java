@@ -40,7 +40,6 @@ import com.srotya.sidewinder.core.storage.DataPoint;
 import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.RejectException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
-import com.srotya.sidewinder.core.storage.gorilla.MemStorageEngine.MemTagLookupTable;
 import com.srotya.sidewinder.core.utils.TimeUtils;
 
 /**
@@ -112,7 +111,7 @@ public class TestMemStorageEngine {
 
 	@Test
 	public void testTagEncodeDecode() throws IOException {
-		MemTagLookupTable table = new MemTagLookupTable();
+		MemTagIndex table = new MemTagIndex();
 		String encodedStr = MemStorageEngine.encodeTagsToString(table, Arrays.asList("host", "value", "test"));
 		List<String> decodedStr = MemStorageEngine.decodeStringToTags(table, encodedStr);
 		assertEquals(Arrays.asList("host", "value", "test"), decodedStr);

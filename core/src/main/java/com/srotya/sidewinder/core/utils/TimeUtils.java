@@ -131,18 +131,4 @@ public class TimeUtils {
 		return ((timeInSeconds / bucketInSeconds) * bucketInSeconds);
 	}
 
-	/**
-	 * @param time
-	 * @param unit
-	 * @param timestamp
-	 * @param bucketInSeconds
-	 * @return
-	 */
-	public static TimeSplit getTimeSplit(TimeSplit time, TimeUnit unit, long timestamp, int bucketInSeconds) {
-		int ts = timeToSeconds(unit, timestamp);
-		time.setBucket(getWindowFlooredNaturalTime(ts, bucketInSeconds));
-		time.setOffset(timestamp);
-		return time;
-	}
-
 }

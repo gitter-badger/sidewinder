@@ -110,13 +110,53 @@ System.register(['lodash'], function (_export, _context) {
             };
 
             return this.backendSrv.datasourceRequest({
-              url: this.url + '/query/search',
+              url: this.url + '/query/measurements',
               data: interpolated,
               method: 'POST',
               headers: { 'Content-Type': 'application/json' }
             }).then(this.mapToTextValue);
           }
         }, {
+            key: 'conditionTypes',
+            value: function conditionTypes(options) {
+
+              return this.backendSrv.datasourceRequest({
+                  url: this.url + '/query/ctypes',
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                }).then(this.mapToTextValue);
+            }
+          }, {
+            key: 'tagFindQuery',
+            value: function metricFindQuery(options) {
+              var target = typeof options === "string" ? options : options.target;
+              var interpolated = {
+                target: this.templateSrv.replace(target, null, 'regex')
+              };
+
+              return this.backendSrv.datasourceRequest({
+                url: this.url + '/query/tags',
+                data: interpolated,
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+              }).then(this.mapToTextValue);
+            }
+          }, {
+              key: 'fieldOptionsQuery',
+              value: function fieldOptionsQuery(options) {
+                var target = typeof options === "string" ? options : options.target;
+                var interpolated = {
+                  target: this.templateSrv.replace(target, null, 'regex')
+                };
+
+                return this.backendSrv.datasourceRequest({
+                  url: this.url + '/query/fields',
+                  data: interpolated,
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                }).then(this.mapToTextValue);
+              }
+            }, {
           key: 'mapToTextValue',
           value: function mapToTextValue(result) {
             return _.map(result.data, function (d, i) {
@@ -139,6 +179,8 @@ System.register(['lodash'], function (_export, _context) {
             var targets = _.map(options.targets, function (target) {
               return {
                 target: _this.templateSrv.replace(target.target),
+                filters: target.filters,
+                field: target.field,
                 refId: target.refId,
                 hide: target.hide,
                 type: target.type || 'timeserie'

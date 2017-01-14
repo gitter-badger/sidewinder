@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.srotya.sidewinder.core.api;
+package com.srotya.sidewinder.core.api.grafana;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -38,16 +37,16 @@ import javax.ws.rs.core.MediaType;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.srotya.sidewinder.core.storage.DataPoint;
+import com.srotya.sidewinder.core.api.DatabaseOpsApi;
 import com.srotya.sidewinder.core.storage.ItemNotFoundException;
 import com.srotya.sidewinder.core.storage.StorageEngine;
 
 /**
+ * API specifically for designed for Grafana Sidewinder Datasource. This API is
+ * currently NOT REST compliant and is designed to be purely functional.
+ * 
  * @author ambud
- *
  */
 @Path("/{" + DatabaseOpsApi.DB_NAME + "}")
 public class GrafanaQueryApi {
@@ -76,10 +75,11 @@ public class GrafanaQueryApi {
 	@Produces({ MediaType.APPLICATION_JSON })
 	@Consumes({ MediaType.APPLICATION_JSON })
 	public List<Target> query(@PathParam(DatabaseOpsApi.DB_NAME) String dbName, String query) throws ParseException {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		JsonObject json = gson.fromJson(query, JsonObject.class);
-		// System.err.println(gson.toJson(json));
+//		System.err.println(gson.toJson(json));
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		JsonObject range = json.get("range").getAsJsonObject();
 		long startTs = sdf.parse(range.get("from").getAsString()).getTime();
 		long endTs = sdf.parse(range.get("to").getAsString()).getTime();
@@ -87,47 +87,22 @@ public class GrafanaQueryApi {
 		startTs = tz.getOffset(startTs) + startTs;
 		endTs = tz.getOffset(endTs) + endTs;
 
-		// System.out.println("From:" + new Date(startTs) + "\tTo:" + new
-		// Date(endTs) + "\tRaw To:" + range);
-		List<String> measurementNames = new ArrayList<>();
-		JsonArray targets = json.get("targets").getAsJsonArray();
-		for (int i = 0; i < targets.size(); i++) {
-			JsonElement jsonElement = targets.get(i).getAsJsonObject().get("target");
-			if (jsonElement != null) {
-				measurementNames.add(jsonElement.getAsString());
-			}
-		}
+		List<TargetSeries> targetSeries = new ArrayList<>();
+		GrafanaUtils.extractTargetsFromJson(json, targetSeries);
 
 		List<Target> output = new ArrayList<>();
-		for (String measurementName : measurementNames) {
-			Map<String, List<DataPoint>> points;
-			try {
-				// TODO fix query point
-				points = engine.queryDataPoints(dbName, measurementName, "value", startTs, endTs, null, null);
-			} catch (ItemNotFoundException e) {
-				throw new NotFoundException(e.getMessage());
-			}
-			for (Entry<String, List<DataPoint>> entry : points.entrySet()) {
-				List<DataPoint> dataPoints = entry.getValue();
-				Target tar = new Target(entry.getKey());
-				for (DataPoint dataPoint : dataPoints) {
-					if (!dataPoint.isFp()) {
-						tar.getDatapoints().add(new Number[] { dataPoint.getLongValue(), dataPoint.getTimestamp() });
-					} else {
-						tar.getDatapoints().add(new Number[] { dataPoint.getValue(), dataPoint.getTimestamp() });
-					}
-				}
-				output.add(tar);
-			}
+		for (TargetSeries targetSeriesEntry : targetSeries) {
+			GrafanaUtils.queryAndGetData(engine, dbName, startTs, endTs, output, targetSeriesEntry);
 		}
 		return output;
 	}
 
-	@Path("/query/search")
+	@Path("/query/measurements")
 	@POST
 	@Produces({ MediaType.APPLICATION_JSON })
 	@Consumes({ MediaType.APPLICATION_JSON })
-	public Set<String> querySeriesNames(@PathParam(DatabaseOpsApi.DB_NAME) String dbName, String queryString) {
+	public Set<String> queryMeasurementNames(@PathParam(DatabaseOpsApi.DB_NAME) String dbName, String queryString) {
+		System.out.println("Measurement query:" + dbName + "\t" + queryString);
 		try {
 			return engine.getMeasurementsLike(dbName, "");
 		} catch (IOException e) {
@@ -135,58 +110,46 @@ public class GrafanaQueryApi {
 		}
 	}
 
-	public static class Target implements Serializable {
-
-		private static final long serialVersionUID = 1L;
-
-		private String target;
-		private List<Number[]> datapoints;
-
-		public Target(String target) {
-			this.target = target;
-			datapoints = new ArrayList<>();
+	@Path("/query/tags")
+	@POST
+	@Produces({ MediaType.APPLICATION_JSON })
+	@Consumes({ MediaType.APPLICATION_JSON })
+	public Set<String> queryTags(@PathParam(DatabaseOpsApi.DB_NAME) String dbName, String queryString) {
+		System.out.println("Tag query:" + dbName + "\t" + queryString);
+		try {
+			Gson gson = new Gson();
+			JsonObject measurement = gson.fromJson(queryString, JsonObject.class);
+			return engine.getTagsForMeasurement(dbName, measurement.get("target").getAsString());
+		} catch (ItemNotFoundException e) {
+			throw new NotFoundException(e.getMessage());
+		} catch (Exception e) {
+			throw new InternalServerErrorException(e.getMessage());
 		}
+	}
 
-		/**
-		 * @return the target
-		 */
-		public String getTarget() {
-			return target;
+	@Path("/query/fields")
+	@POST
+	@Produces({ MediaType.APPLICATION_JSON })
+	@Consumes({ MediaType.APPLICATION_JSON })
+	public Set<String> queryFields(@PathParam(DatabaseOpsApi.DB_NAME) String dbName, String queryString) {
+		System.out.println("Tag query:" + dbName + "\t" + queryString);
+		try {
+			Gson gson = new Gson();
+			JsonObject measurement = gson.fromJson(queryString, JsonObject.class);
+			return engine.getFieldsForMeasurement(dbName, measurement.get("target").getAsString());
+		} catch (ItemNotFoundException e) {
+			throw new NotFoundException(e.getMessage());
+		} catch (Exception e) {
+			throw new InternalServerErrorException(e.getMessage());
 		}
+	}
 
-		/**
-		 * @param target
-		 *            the target to set
-		 */
-		public void setTarget(String target) {
-			this.target = target;
-		}
-
-		/**
-		 * @return the datapoints
-		 */
-		public List<Number[]> getDatapoints() {
-			return datapoints;
-		}
-
-		/**
-		 * @param datapoints
-		 *            the datapoints to set
-		 */
-		public void setDatapoints(List<Number[]> datapoints) {
-			this.datapoints = datapoints;
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.lang.Object#toString()
-		 */
-		@Override
-		public String toString() {
-			return "Target [target=" + target + ", datapoints=" + datapoints + "]";
-		}
-
+	@Path("/query/ctypes")
+	@POST
+	@Produces({ MediaType.APPLICATION_JSON })
+	@Consumes({ MediaType.APPLICATION_JSON })
+	public Set<String> queryTags() {
+		return new HashSet<>(Arrays.asList("AND", "OR"));
 	}
 
 }

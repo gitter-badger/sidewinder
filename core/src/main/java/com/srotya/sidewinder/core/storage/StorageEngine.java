@@ -64,6 +64,8 @@ public interface StorageEngine {
 	public Set<String> getDatabases() throws Exception;
 
 	public Set<String> getAllMeasurementsForDb(String dbName) throws Exception;
+	
+	public Set<String> getTagsForMeasurement(String dbname, String measurementName) throws Exception;
 
 	public void deleteAllData() throws Exception;
 
@@ -74,5 +76,7 @@ public interface StorageEngine {
 	public void dropDatabase(String dbName) throws Exception;
 
 	public void dropMeasurement(String dbName, String measurementName) throws Exception;
+
+	public Set<String> getFieldsForMeasurement(String dbName, String measurementName) throws Exception;
 
 }

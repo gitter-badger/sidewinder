@@ -20,8 +20,8 @@ import java.util.HashMap;
 
 import com.srotya.sidewinder.cluster.storage.ClusteredMemStorageEngine;
 import com.srotya.sidewinder.core.api.DatabaseOpsApi;
-import com.srotya.sidewinder.core.api.GrafanaQueryApi;
 import com.srotya.sidewinder.core.api.MeasurementOpsApi;
+import com.srotya.sidewinder.core.api.grafana.GrafanaQueryApi;
 import com.srotya.sidewinder.core.ingress.binary.NettyBinaryIngestionServer;
 import com.srotya.sidewinder.core.ingress.http.NettyHTTPIngestionServer;
 import com.srotya.sidewinder.core.storage.StorageEngine;

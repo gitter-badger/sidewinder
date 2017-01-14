@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 Ambud Sharma
+ * Copyright 2017 Ambud Sharma
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,44 +15,26 @@
  */
 package com.srotya.sidewinder.core.utils;
 
-import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
-public class TimeSplit implements Serializable {
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 
-	private static final long serialVersionUID = 1L;
+/**
+ * @author ambud
+ */
+public class GenericUtils {
 	
-	private int bucket;
-	private long offset;
-	
-	public TimeSplit() {
+	private GenericUtils() {
 	}
 
-	/**
-	 * @return the bucket
-	 */
-	public int getBucket() {
-		return bucket;
-	}
-
-	/**
-	 * @param bucket the bucket to set
-	 */
-	public void setBucket(int bucket) {
-		this.bucket = bucket;
-	}
-
-	/**
-	 * @return the offset
-	 */
-	public long getOffset() {
-		return offset;
-	}
-
-	/**
-	 * @param offset the offset to set
-	 */
-	public void setOffset(long offset) {
-		this.offset = offset;
+	public static List<String> jsonArrayToStringArray(JsonArray array) {
+		List<String> ary = new ArrayList<>();
+		for (JsonElement jsonElement : array) {
+			ary.add(jsonElement.getAsString());
+		}
+		return ary;
 	}
 
 }

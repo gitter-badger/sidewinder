@@ -361,4 +361,16 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 		local.dropMeasurement(dbName, measurementName);
 	}
 
+	@Override
+	public Set<String> getTagsForMeasurement(String dbname, String measurementName) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Set<String> getFieldsForMeasurement(String dbName, String measurementName) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
