@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 import com.srotya.sidewinder.core.predicates.BetweenPredicate;
 import com.srotya.sidewinder.core.predicates.Predicate;
@@ -46,11 +48,18 @@ import com.srotya.sidewinder.core.utils.TimeUtils;
  */
 public class TimeSeries {
 
-	private static final int TIME_BUCKET_CONSTANT = 4096;
+	public static final int TIME_BUCKET_CONSTANT = 4096;
 	private SortedMap<String, TimeSeriesBucket> bucketMap;
 	private boolean fp;
+	private AtomicInteger retentionBuckets;
+	private Logger logger;
+	private String seriesId;
 
-	public TimeSeries(boolean fp) {
+	public TimeSeries(String seriesId, int retentionHours, boolean fp) {
+		this.seriesId = seriesId;
+		logger = Logger.getLogger(seriesId);
+		retentionBuckets = new AtomicInteger(0);
+		setRetentionHours(retentionHours);
 		this.fp = fp;
 		bucketMap = new ConcurrentSkipListMap<>();
 	}
@@ -149,10 +158,57 @@ public class TimeSeries {
 	}
 
 	/**
+	 * Cleans stale series
+	 */
+	public void collectGarbage() {
+		while (bucketMap.size() > retentionBuckets.get()) {
+			int oldSize = bucketMap.size();
+			String key = bucketMap.firstKey();
+			bucketMap.remove(key);
+			logger.info("GC, removing bucket:" + key + ": as it passed retention period of:" + retentionBuckets.get()
+					+ ":old size:" + oldSize + ":newsize:" + bucketMap.size() + ":");
+		}
+	}
+
+	/**
+	 * Update retention hours for this TimeSeries
+	 * 
+	 * @param retentionHours
+	 */
+	public void setRetentionHours(int retentionHours) {
+		if(retentionHours<1) {
+			retentionHours = 2;
+		}
+		this.retentionBuckets.set((retentionHours * 3600) / TIME_BUCKET_CONSTANT);
+	}
+
+	/**
+	 * @return number of {@link TimeSeriesBucket}s to retain for this
+	 *         {@link TimeSeries}
+	 */
+	public int getRetentionBuckets() {
+		return retentionBuckets.get();
+	}
+
+	/**
 	 * @return the bucketMap
 	 */
 	public SortedMap<String, TimeSeriesBucket> getBucketMap() {
 		return bucketMap;
+	}
+
+	/**
+	 * @return the seriesId
+	 */
+	public String getSeriesId() {
+		return seriesId;
+	}
+
+	/**
+	 * @param seriesId the seriesId to set
+	 */
+	public void setSeriesId(String seriesId) {
+		this.seriesId = seriesId;
 	}
 
 	/**

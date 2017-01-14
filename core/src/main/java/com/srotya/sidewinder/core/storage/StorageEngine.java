@@ -79,4 +79,15 @@ public interface StorageEngine {
 
 	public Set<String> getFieldsForMeasurement(String dbName, String measurementName) throws Exception;
 
+	// retention policy update methods
+	
+	public void updateTimeSeriesRetentionPolicy(String dbName, String measurementName, String valueFieldName,
+			List<String> tags, int retentionHours);
+
+	public void updateTimeSeriesRetentionPolicy(String dbName, String measurementName, int retentionHours);
+
+	public void updateDefaultTimeSeriesRetentionPolicy(String dbName, int retentionHours);
+
+	public void updateTimeSeriesRetentionPolicy(String dbName, int retentionHours);
+
 }

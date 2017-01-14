@@ -37,6 +37,13 @@ import com.srotya.sidewinder.core.storage.RejectException;
 public class TestTimeSeriesBucket {
 
 	@Test
+	public void testRetentionPolicy() {
+		TimeSeries series = new TimeSeries("test", 27, false);
+		System.out.println("Retention buckets:" + series.getRetentionBuckets());
+		System.out.println("Default retention hours:" + MemStorageEngine.DEFAULT_RETENTION_HOURS);
+	}
+
+	@Test
 	public void testReadWriteLongs() throws RejectException {
 		long ts = System.currentTimeMillis();
 		int count = 10000;

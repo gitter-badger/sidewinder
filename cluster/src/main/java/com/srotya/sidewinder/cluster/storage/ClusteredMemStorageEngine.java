@@ -373,4 +373,29 @@ public class ClusteredMemStorageEngine implements StorageEngine {
 		return null;
 	}
 
+	@Override
+	public void updateTimeSeriesRetentionPolicy(String dbName, String measurementName, String valueFieldName,
+			List<String> tags, int retentionHours) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void updateTimeSeriesRetentionPolicy(String dbName, String measurementName, int retentionHours) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void updateDefaultTimeSeriesRetentionPolicy(String dbName, int retentionHours) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void updateTimeSeriesRetentionPolicy(String dbName, int retentionHours) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

@@ -62,6 +62,9 @@ import com.srotya.sidewinder.core.storage.StorageEngine;
  */
 public class MemStorageEngine implements StorageEngine {
 
+	public static final String RETENTION_HOURS = "default.series.retention.hours";
+	public static final int DEFAULT_RETENTION_HOURS = (int) Math
+			.ceil((((double) TimeSeries.TIME_BUCKET_CONSTANT) * 24 / 60) / 60);
 	private static final String FIELD_TAG_SEPARATOR = "#";
 	private static final String TAG_SEPARATOR = "_";
 	private static final Logger logger = Logger.getLogger(MemStorageEngine.class.getName());
@@ -69,14 +72,63 @@ public class MemStorageEngine implements StorageEngine {
 	private Map<String, Map<String, SortedMap<String, TimeSeries>>> databaseMap;
 	private AtomicInteger counter = new AtomicInteger(0);
 	private Map<String, Map<String, MemTagIndex>> tagLookupTable;
+	private Map<String, Integer> databaseRetentionPolicyMap;
+	private int defaultRetentionHours;
 
 	@Override
 	public void configure(Map<String, String> conf) throws IOException {
+		this.defaultRetentionHours = Integer
+				.parseInt(conf.getOrDefault(RETENTION_HOURS, String.valueOf(DEFAULT_RETENTION_HOURS)));
+		logger.info("Setting default timeseries retention hours policy to:" + defaultRetentionHours);
 		tagLookupTable = new ConcurrentHashMap<>();
 		databaseMap = new ConcurrentHashMap<>();
+		databaseRetentionPolicyMap = new ConcurrentHashMap<>();
 		Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
-			// System.out.println(counter.getAndSet(0));
-		}, 0, 1, TimeUnit.SECONDS);
+			for (Map<String, SortedMap<String, TimeSeries>> map : databaseMap.values()) {
+				for (SortedMap<String, TimeSeries> sortedMap : map.values()) {
+					for (TimeSeries timeSeries : sortedMap.values()) {
+						timeSeries.collectGarbage();
+					}
+				}
+			}
+		}, 0, 60, TimeUnit.SECONDS);
+	}
+
+	@Override
+	public void updateTimeSeriesRetentionPolicy(String dbName, String measurementName, String valueFieldName,
+			List<String> tags, int retentionHours) {
+		TimeSeries series = getOrCreateTimeSeries(dbName, measurementName, valueFieldName, tags, true);
+		series.setRetentionHours(retentionHours);
+	}
+
+	@Override
+	public void updateTimeSeriesRetentionPolicy(String dbName, String measurementName, int retentionHours) {
+		Map<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
+		if (measurementMap != null) {
+			SortedMap<String, TimeSeries> seriesMap = measurementMap.get(measurementName);
+			if (seriesMap != null) {
+				for (TimeSeries series : seriesMap.values()) {
+					series.setRetentionHours(retentionHours);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void updateDefaultTimeSeriesRetentionPolicy(String dbName, int retentionHours) {
+		databaseRetentionPolicyMap.put(dbName, retentionHours);
+	}
+
+	@Override
+	public void updateTimeSeriesRetentionPolicy(String dbName, int retentionHours) {
+		Map<String, SortedMap<String, TimeSeries>> measurementMap = databaseMap.get(dbName);
+		if (measurementMap != null) {
+			for (SortedMap<String, TimeSeries> sortedMap : measurementMap.values()) {
+				for (TimeSeries timeSeries : sortedMap.values()) {
+					timeSeries.setRetentionHours(retentionHours);
+				}
+			}
+		}
 	}
 
 	@Override
@@ -94,7 +146,7 @@ public class MemStorageEngine implements StorageEngine {
 						Set<String> temp = memTagIndex.searchRowKeysForTag(tag);
 						rowKeys.addAll(temp);
 					}
-				}else {
+				} else {
 					rowKeys.addAll(seriesMap.keySet());
 				}
 				for (String entry : rowKeys) {
@@ -153,7 +205,7 @@ public class MemStorageEngine implements StorageEngine {
 	@Override
 	public void writeDataPoint(String dbName, DataPoint dp) throws IOException {
 		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, dp.getMeasurementName(), dp.getValueFieldName(),
-				dp.getTags(), TimeUnit.MILLISECONDS, dp.getTimestamp(), dp.isFp());
+				dp.getTags(), dp.isFp());
 		if (dp.isFp() != timeSeries.isFp()) {
 			// drop this datapoint, mixed series are not allowed
 			throw INVALID_DATAPOINT_EXCEPTION;
@@ -169,8 +221,7 @@ public class MemStorageEngine implements StorageEngine {
 	@Override
 	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
 			TimeUnit unit, long timestamp, long value, Callback callback) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, valueFieldName, tags, unit, timestamp,
-				false);
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, valueFieldName, tags, false);
 		timeSeries.addDataPoint(unit, timestamp, value);
 		counter.incrementAndGet();
 	}
@@ -193,7 +244,7 @@ public class MemStorageEngine implements StorageEngine {
 	}
 
 	protected TimeSeries getOrCreateTimeSeries(String dbName, String measurementName, String valueFieldName,
-			List<String> tags, TimeUnit unit, long timestamp, boolean fp) {
+			List<String> tags, boolean fp) {
 		Collections.sort(tags);
 
 		String rowKey = constructRowKey(dbName, measurementName, valueFieldName, tags);
@@ -203,6 +254,7 @@ public class MemStorageEngine implements StorageEngine {
 		if (measurementMap == null) {
 			measurementMap = new ConcurrentSkipListMap<>();
 			databaseMap.put(dbName, measurementMap);
+			databaseRetentionPolicyMap.put(dbName, defaultRetentionHours);
 			logger.fine("Created new database:" + dbName);
 		}
 
@@ -217,7 +269,7 @@ public class MemStorageEngine implements StorageEngine {
 		// check and create timeseries
 		TimeSeries timeSeries = seriesMap.get(rowKey);
 		if (timeSeries == null) {
-			timeSeries = new TimeSeries(fp);
+			timeSeries = new TimeSeries(rowKey, databaseRetentionPolicyMap.get(dbName), fp);
 			seriesMap.put(rowKey, timeSeries);
 			logger.fine("Created new timeseries:" + timeSeries + " for measurement:" + measurementName + "\t" + rowKey);
 		}
@@ -260,8 +312,7 @@ public class MemStorageEngine implements StorageEngine {
 	@Override
 	public void writeSeries(String dbName, String measurementName, String valueFieldName, List<String> tags,
 			TimeUnit unit, long timestamp, double value, Callback callback) throws IOException {
-		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, valueFieldName, tags, unit, timestamp,
-				true);
+		TimeSeries timeSeries = getOrCreateTimeSeries(dbName, measurementName, valueFieldName, tags, true);
 		timeSeries.addDataPoint(unit, timestamp, value);
 		counter.incrementAndGet();
 	}
