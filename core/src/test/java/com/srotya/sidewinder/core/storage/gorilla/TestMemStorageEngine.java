@@ -51,7 +51,7 @@ public class TestMemStorageEngine {
 
 	private Map<String, String> conf = new HashMap<>();
 
-	 @Test
+//	@Test
 	public void testWritePerformance() throws IOException, InterruptedException {
 		final MemStorageEngine engine = new MemStorageEngine();
 		engine.configure(new HashMap<>());
@@ -77,10 +77,10 @@ public class TestMemStorageEngine {
 		es.shutdown();
 		es.awaitTermination(10, TimeUnit.SECONDS);
 		System.out.println("Write throughput object " + tcount + "x" + count + ":"
-				+ (System.currentTimeMillis() - timeMillis) + "ms with " + rejects.get() + " rejects");
+				+ (System.currentTimeMillis() - timeMillis) + "ms with " + rejects.get() + " rejects using " + tcount);
 	}
 
-	 @Test
+//	@Test
 	public void testWritePerformanceDirect() throws IOException, InterruptedException {
 		final MemStorageEngine engine = new MemStorageEngine();
 		engine.configure(new HashMap<>());
@@ -106,7 +106,7 @@ public class TestMemStorageEngine {
 		es.shutdown();
 		es.awaitTermination(10, TimeUnit.SECONDS);
 		System.out.println("Write throughput direct " + tcount + "x" + count + ":"
-				+ (System.currentTimeMillis() - timeMillis) + "ms with " + rejects.get() + " rejects");
+				+ (System.currentTimeMillis() - timeMillis) + "ms with " + rejects.get() + " rejects using " + tcount);
 	}
 
 	@Test
